@@ -1,8 +1,10 @@
-package tests 
+package tests
 
 import (
+	"net/http"
 	"reflect"
 	"testing"
+
 	"github.com/nginxinc/nginx-plus-go-sdk/client"
 )
 
@@ -11,7 +13,8 @@ const (
 )
 
 func TestClient(t *testing.T) {
-	c, err := client.NewNginxClient("http://127.0.0.1:8080/upstream_conf", "http://127.0.0.1:8080/status")
+	httpClient := &http.Client{}
+	c, err := client.NewNginxClient(httpClient, "http://127.0.0.1:8080/api")
 
 	if err != nil {
 		t.Fatalf("Error when creating a client: %v", err)
@@ -33,13 +36,13 @@ func TestClient(t *testing.T) {
 
 	// test adding an http server
 
-	err = c.AddHTTPServer(upstream, server)	
+	err = c.AddHTTPServer(upstream, server)
 
 	if err != nil {
 		t.Fatalf("Error when adding a server: %v", err)
 	}
 
-	err = c.AddHTTPServer(upstream, server)	
+	err = c.AddHTTPServer(upstream, server)
 
 	if err == nil {
 		t.Errorf("Adding a duplicated server succeeded")
@@ -78,7 +81,7 @@ func TestClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error when getting servers: %v", err)
 	}
-	if ! reflect.DeepEqual(servers1, servers) {
+	if !reflect.DeepEqual(servers1, servers) {
 		t.Errorf("Return servers %v != added servers %v", servers, servers1)
 	}
 
@@ -98,7 +101,7 @@ func TestClient(t *testing.T) {
 		t.Errorf("The number of deleted servers %v != 0", len(deleted))
 	}
 
-	servers2 := []string{"127.0.0.2:8003", "127.0.0.2:8004", "127.0.0.2:8005"} 
+	servers2 := []string{"127.0.0.2:8003", "127.0.0.2:8004", "127.0.0.2:8005"}
 
 	// updating with 2 new servers, 1 existing
 
