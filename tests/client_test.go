@@ -32,7 +32,9 @@ func TestClient(t *testing.T) {
 		t.Errorf("Nonexisting upstream exists")
 	}
 
-	server := "127.0.0.1:8001"
+	server := client.UpstreamServer{
+		Server: "127.0.0.1:8001",
+	}
 
 	// test adding an http server
 
@@ -50,18 +52,28 @@ func TestClient(t *testing.T) {
 
 	// test deleting an http server
 
-	err = c.DeleteHTTPServer(upstream, server)
+	err = c.DeleteHTTPServer(upstream, server.Server)
 	if err != nil {
 		t.Fatalf("Error when deleting a server: %v", err)
 	}
 
-	err = c.DeleteHTTPServer(upstream, server)
+	err = c.DeleteHTTPServer(upstream, server.Server)
 	if err == nil {
 		t.Errorf("Deleting a nonexisting server succeeded")
 	}
 
 	// test updating servers
-	servers1 := []string{"127.0.0.2:8001", "127.0.0.2:8002", "127.0.0.2:8003"}
+	servers1 := []client.UpstreamServer{
+		client.UpstreamServer{
+			Server: "127.0.0.2:8001",
+		},
+		client.UpstreamServer{
+			Server: "127.0.0.2:8002",
+		},
+		client.UpstreamServer{
+			Server: "127.0.0.2:8003",
+		},
+	}
 
 	added, deleted, err := c.UpdateHTTPServers(upstream, servers1)
 
@@ -81,7 +93,7 @@ func TestClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error when getting servers: %v", err)
 	}
-	if !reflect.DeepEqual(servers1, servers) {
+	if !compareUpstreamServers(servers1, servers) {
 		t.Errorf("Return servers %v != added servers %v", servers, servers1)
 	}
 
@@ -101,7 +113,16 @@ func TestClient(t *testing.T) {
 		t.Errorf("The number of deleted servers %v != 0", len(deleted))
 	}
 
-	servers2 := []string{"127.0.0.2:8003", "127.0.0.2:8004", "127.0.0.2:8005"}
+	servers2 := []client.UpstreamServer{
+		client.UpstreamServer{
+			Server: "127.0.0.2:8003",
+		},
+		client.UpstreamServer{
+			Server: "127.0.0.2:8004",
+		}, client.UpstreamServer{
+			Server: "127.0.0.2:8005",
+		},
+	}
 
 	// updating with 2 new servers, 1 existing
 
@@ -119,7 +140,7 @@ func TestClient(t *testing.T) {
 
 	// updating with zero servers - removing
 
-	added, deleted, err = c.UpdateHTTPServers(upstream, []string{})
+	added, deleted, err = c.UpdateHTTPServers(upstream, []client.UpstreamServer{})
 
 	if err != nil {
 		t.Fatalf("Error when updating servers: %v", err)
@@ -141,4 +162,17 @@ func TestClient(t *testing.T) {
 	if len(servers) != 0 {
 		t.Errorf("The number of servers %v != 0", len(servers))
 	}
+}
+
+func compareUpstreamServers(x []client.UpstreamServer, y []client.UpstreamServer) bool {
+	var xServers []string
+	for _, us := range x {
+		xServers = append(xServers, us.Server)
+	}
+	var yServers []string
+	for _, us := range y {
+		yServers = append(yServers, us.Server)
+	}
+
+	return reflect.DeepEqual(xServers, yServers)
 }

@@ -18,19 +18,13 @@ type NginxClient struct {
 	httpClient  *http.Client
 }
 
-type peers struct {
-	Peers []peer
-}
-
-type peer struct {
-	ID     int
-	Server string
-}
-
 type versions []int
 
-type upstreamServer struct {
-	Server string `json:"server"`
+type UpstreamServer struct {
+	ID          int64  `json:"id,omitempty"`
+	Server      string `json:"server"`
+	MaxFails    int64  `json:"max_fails"`
+	FailTimeout string `json:"fail_timeout,omitempty"`
 }
 
 type apiErrorResponse struct {
@@ -129,16 +123,17 @@ func readAPIErrorResponse(respBody io.ReadCloser) (*apiErrorResponse, error) {
 
 // CheckIfUpstreamExists checks if the upstream exists in NGINX. If the upstream doesn't exist, it returns the error.
 func (client *NginxClient) CheckIfUpstreamExists(upstream string) error {
-	_, err := client.getUpstreamPeers(upstream)
+	_, err := client.GetHTTPServers(upstream)
 	return err
 }
 
-func (client *NginxClient) getUpstreamPeers(upstream string) (*peers, error) {
-	url := fmt.Sprintf("%v/%v/http/upstreams/%v", client.apiEndpoint, APIVersion, upstream)
+// GetHTTPServers returns the servers of the upsteam from NGINX.
+func (client *NginxClient) GetHTTPServers(upstream string) ([]UpstreamServer, error) {
+	url := fmt.Sprintf("%v/%v/http/upstreams/%v/servers", client.apiEndpoint, APIVersion, upstream)
 
 	resp, err := client.httpClient.Get(url)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to the API to get upstream %v info: %v", upstream, err)
+		return nil, fmt.Errorf("failed to connect to the API to get upstream servers of upstream %v: %v", upstream, err)
 	}
 	defer resp.Body.Close()
 
@@ -149,36 +144,32 @@ func (client *NginxClient) getUpstreamPeers(upstream string) (*peers, error) {
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read the response body with upstream %v info: %v", upstream, err)
+		return nil, fmt.Errorf("failed to read the response body with upstream servers of upstream %v: %v", upstream, err)
 	}
 
-	var prs peers
-	err = json.Unmarshal(body, &prs)
+	var servers []UpstreamServer
+	err = json.Unmarshal(body, &servers)
 	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling upstream %v: got %q response: %v", upstream, string(body), err)
+		return nil, fmt.Errorf("error unmarshalling upstream servers of upstream %v: got %q response: %v", upstream, string(body), err)
 	}
 
-	return &prs, nil
+	return servers, nil
 }
 
 // AddHTTPServer adds the server to the upstream.
-func (client *NginxClient) AddHTTPServer(upstream string, server string) error {
-	id, err := client.getIDOfHTTPServer(upstream, server)
+func (client *NginxClient) AddHTTPServer(upstream string, server UpstreamServer) error {
+	id, err := client.getIDOfHTTPServer(upstream, server.Server)
 
 	if err != nil {
-		return fmt.Errorf("failed to add %v server to %v upstream: %v", server, upstream, err)
+		return fmt.Errorf("failed to add %v server to %v upstream: %v", server.Server, upstream, err)
 	}
 	if id != -1 {
-		return fmt.Errorf("failed to add %v server to %v upstream: server already exists", server, upstream)
+		return fmt.Errorf("failed to add %v server to %v upstream: server already exists", server.Server, upstream)
 	}
 
-	upsServer := upstreamServer{
-		Server: server,
-	}
-
-	jsonServer, err := json.Marshal(upsServer)
+	jsonServer, err := json.Marshal(server)
 	if err != nil {
-		return fmt.Errorf("error marshalling upstream server %v: %v", upsServer, err)
+		return fmt.Errorf("error marshalling upstream server %v: %v", server, err)
 	}
 
 	url := fmt.Sprintf("%v/%v/http/upstreams/%v/servers/", client.apiEndpoint, APIVersion, upstream)
@@ -186,13 +177,13 @@ func (client *NginxClient) AddHTTPServer(upstream string, server string) error {
 	resp, err := client.httpClient.Post(url, "application/json", bytes.NewBuffer(jsonServer))
 
 	if err != nil {
-		return fmt.Errorf("failed to add %v server to %v upstream: %v", server, upstream, err)
+		return fmt.Errorf("failed to add %v server to %v upstream: %v", server.Server, upstream, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
 		mainErr := fmt.Errorf("failed to add %v server to %v upstream: expected %v response, got %v",
-			server, upstream, http.StatusCreated, resp.StatusCode)
+			server.Server, upstream, http.StatusCreated, resp.StatusCode)
 		return createResponseMismatchError(resp.Body, mainErr)
 	}
 
@@ -234,7 +225,7 @@ func (client *NginxClient) DeleteHTTPServer(upstream string, server string) erro
 // UpdateHTTPServers updates the servers of the upstream.
 // Servers that are in the slice, but don't exist in NGINX will be added to NGINX.
 // Servers that aren't in the slice, but exist in NGINX, will be removed from NGINX.
-func (client *NginxClient) UpdateHTTPServers(upstream string, servers []string) ([]string, []string, error) {
+func (client *NginxClient) UpdateHTTPServers(upstream string, servers []UpstreamServer) ([]UpstreamServer, []UpstreamServer, error) {
 	serversInNginx, err := client.GetHTTPServers(upstream)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to update servers of %v upstream: %v", upstream, err)
@@ -250,7 +241,7 @@ func (client *NginxClient) UpdateHTTPServers(upstream string, servers []string) 
 	}
 
 	for _, server := range toDelete {
-		err := client.DeleteHTTPServer(upstream, server)
+		err := client.DeleteHTTPServer(upstream, server.Server)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to update servers of %v upstream: %v", upstream, err)
 		}
@@ -259,11 +250,11 @@ func (client *NginxClient) UpdateHTTPServers(upstream string, servers []string) 
 	return toAdd, toDelete, nil
 }
 
-func determineUpdates(updatedServers []string, nginxServers []string) (toAdd []string, toRemove []string) {
+func determineUpdates(updatedServers []UpstreamServer, nginxServers []UpstreamServer) (toAdd []UpstreamServer, toRemove []UpstreamServer) {
 	for _, server := range updatedServers {
 		found := false
 		for _, serverNGX := range nginxServers {
-			if server == serverNGX {
+			if server.Server == serverNGX.Server {
 				found = true
 				break
 			}
@@ -276,7 +267,7 @@ func determineUpdates(updatedServers []string, nginxServers []string) (toAdd []s
 	for _, serverNGX := range nginxServers {
 		found := false
 		for _, server := range updatedServers {
-			if serverNGX == server {
+			if serverNGX.Server == server.Server {
 				found = true
 				break
 			}
@@ -289,30 +280,15 @@ func determineUpdates(updatedServers []string, nginxServers []string) (toAdd []s
 	return
 }
 
-// GetHTTPServers returns the servers of the upsteam from NGINX.
-func (client *NginxClient) GetHTTPServers(upstream string) ([]string, error) {
-	peers, err := client.getUpstreamPeers(upstream)
-	if err != nil {
-		return nil, fmt.Errorf("error getting servers of %v upstream: %v", upstream, err)
-	}
-
-	var servers []string
-	for _, peer := range peers.Peers {
-		servers = append(servers, peer.Server)
-	}
-
-	return servers, nil
-}
-
-func (client *NginxClient) getIDOfHTTPServer(upstream string, name string) (int, error) {
-	peers, err := client.getUpstreamPeers(upstream)
+func (client *NginxClient) getIDOfHTTPServer(upstream string, name string) (int64, error) {
+	servers, err := client.GetHTTPServers(upstream)
 	if err != nil {
 		return -1, fmt.Errorf("error getting id of server %v of upstream %v: %v", name, upstream, err)
 	}
 
-	for _, p := range peers.Peers {
-		if p.Server == name {
-			return p.ID, nil
+	for _, s := range servers {
+		if s.Server == name {
+			return s.ID, nil
 		}
 	}
 
