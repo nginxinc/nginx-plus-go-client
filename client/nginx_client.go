@@ -25,6 +25,7 @@ type UpstreamServer struct {
 	Server      string `json:"server"`
 	MaxFails    int64  `json:"max_fails"`
 	FailTimeout string `json:"fail_timeout,omitempty"`
+	SlowStart   string `json:"slow_start,omitempty"`
 }
 
 type apiErrorResponse struct {
