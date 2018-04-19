@@ -66,7 +66,6 @@ func TestClient(t *testing.T) {
 	servers1 := []client.UpstreamServer{
 		client.UpstreamServer{
 			Server:    "127.0.0.2:8001",
-			SlowStart: "4s",
 		},
 		client.UpstreamServer{
 			Server: "127.0.0.2:8002",
@@ -162,6 +161,42 @@ func TestClient(t *testing.T) {
 
 	if len(servers) != 0 {
 		t.Errorf("The number of servers %v != 0", len(servers))
+	}
+}
+// Test adding the slow_start property on an upstream server
+func TestUpstreamServerSlowStart(t *testing.T) {
+	httpClient := &http.Client{}
+	c, err := client.NewNginxClient(httpClient, "http://127.0.0.1:8080/api")
+	if err != nil {
+		t.Fatalf("Error connecting to nginx: %v", err)
+	}
+
+	// Add a server with slow_start
+	// (And FailTimeout, since the default is 10s)
+	server := client.UpstreamServer{
+		Server:      "127.0.0.1:2000",
+		SlowStart:   "11s",
+		FailTimeout: "10s",
+	}
+	err = c.AddHTTPServer(upstream, server)
+	if err != nil {
+		t.Errorf("Error adding upstream server: %v", err)
+	}
+	servers, err := c.GetHTTPServers(upstream)
+	if len(servers) != 1 {
+		t.Errorf("Too many servers")
+	}
+	// don't compare IDs
+	servers[0].ID = 0
+
+	if !reflect.DeepEqual(server, servers[0]) {
+		t.Errorf("Expected: %v Got: %v", server, servers[0])
+	}
+
+	// remove upstream servers
+	_, _, err = c.UpdateHTTPServers(upstream, []client.UpstreamServer{})
+	if err != nil {
+		t.Errorf("Couldn't remove servers: %v", err)
 	}
 }
 
