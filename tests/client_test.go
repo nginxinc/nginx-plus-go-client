@@ -65,7 +65,8 @@ func TestClient(t *testing.T) {
 	// test updating servers
 	servers1 := []client.UpstreamServer{
 		client.UpstreamServer{
-			Server: "127.0.0.2:8001",
+			Server:    "127.0.0.2:8001",
+			SlowStart: "4s",
 		},
 		client.UpstreamServer{
 			Server: "127.0.0.2:8002",
