@@ -20,7 +20,17 @@ type NginxClient struct {
 
 type versions []int
 
+// UpstreamServer lets you configure HTTP upstreams
 type UpstreamServer struct {
+	ID          int64  `json:"id,omitempty"`
+	Server      string `json:"server"`
+	MaxFails    int64  `json:"max_fails"`
+	FailTimeout string `json:"fail_timeout,omitempty"`
+	SlowStart   string `json:"slow_start,omitempty"`
+}
+
+// StreamUpstreamServer lets you configure Stream upstreams
+type StreamUpstreamServer struct {
 	ID          int64  `json:"id,omitempty"`
 	Server      string `json:"server"`
 	MaxFails    int64  `json:"max_fails"`
@@ -128,30 +138,15 @@ func (client *NginxClient) CheckIfUpstreamExists(upstream string) error {
 	return err
 }
 
-// GetHTTPServers returns the servers of the upsteam from NGINX.
+// GetHTTPServers returns the servers of the upstream from NGINX.
 func (client *NginxClient) GetHTTPServers(upstream string) ([]UpstreamServer, error) {
-	url := fmt.Sprintf("%v/%v/http/upstreams/%v/servers", client.apiEndpoint, APIVersion, upstream)
-
-	resp, err := client.httpClient.Get(url)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to the API to get upstream servers of upstream %v: %v", upstream, err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		mainErr := fmt.Errorf("upstream %v is invalid:  expected %v response, got %v", upstream, http.StatusOK, resp.StatusCode)
-		return nil, createResponseMismatchError(resp.Body, mainErr)
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read the response body with upstream servers of upstream %v: %v", upstream, err)
-	}
+	path := fmt.Sprintf("http/upstreams/%v/servers", upstream)
 
 	var servers []UpstreamServer
-	err = json.Unmarshal(body, &servers)
+	err := client.get(path, &servers)
+
 	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling upstream servers of upstream %v: got %q response: %v", upstream, string(body), err)
+		return nil, fmt.Errorf("failed to get the HTTP servers of upstream %v: %v", upstream, err)
 	}
 
 	return servers, nil
@@ -168,24 +163,10 @@ func (client *NginxClient) AddHTTPServer(upstream string, server UpstreamServer)
 		return fmt.Errorf("failed to add %v server to %v upstream: server already exists", server.Server, upstream)
 	}
 
-	jsonServer, err := json.Marshal(server)
-	if err != nil {
-		return fmt.Errorf("error marshalling upstream server %v: %v", server, err)
-	}
-
-	url := fmt.Sprintf("%v/%v/http/upstreams/%v/servers/", client.apiEndpoint, APIVersion, upstream)
-
-	resp, err := client.httpClient.Post(url, "application/json", bytes.NewBuffer(jsonServer))
-
+	path := fmt.Sprintf("http/upstreams/%v/servers/", upstream)
+	err = client.post(path, &server)
 	if err != nil {
 		return fmt.Errorf("failed to add %v server to %v upstream: %v", server.Server, upstream, err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusCreated {
-		mainErr := fmt.Errorf("failed to add %v server to %v upstream: expected %v response, got %v",
-			server.Server, upstream, http.StatusCreated, resp.StatusCode)
-		return createResponseMismatchError(resp.Body, mainErr)
 	}
 
 	return nil
@@ -198,26 +179,14 @@ func (client *NginxClient) DeleteHTTPServer(upstream string, server string) erro
 		return fmt.Errorf("failed to remove %v server from  %v upstream: %v", server, upstream, err)
 	}
 	if id == -1 {
-		return fmt.Errorf("failed to remove %v server from %v upstream: server doesn't exists", server, upstream)
+		return fmt.Errorf("failed to remove %v server from %v upstream: server doesn't exist", server, upstream)
 	}
 
-	url := fmt.Sprintf("%v/%v/http/upstreams/%v/servers/%v", client.apiEndpoint, APIVersion, upstream, id)
+	path := fmt.Sprintf("http/upstreams/%v/servers/%v", upstream, id)
+	err = client.delete(path)
 
-	req, err := http.NewRequest(http.MethodDelete, url, nil)
-	if err != nil {
-		return fmt.Errorf("failed to create a request: %v", err)
-	}
-
-	resp, err := client.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to remove %v server from %v upstream: %v", server, upstream, err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		mainErr := fmt.Errorf("failed to remove %v server from %v upstream: expected %v response, got %v",
-			server, upstream, http.StatusOK, resp.StatusCode)
-		return createResponseMismatchError(resp.Body, mainErr)
 	}
 
 	return nil
@@ -294,4 +263,205 @@ func (client *NginxClient) getIDOfHTTPServer(upstream string, name string) (int6
 	}
 
 	return -1, nil
+}
+
+func (client *NginxClient) get(path string, data interface{}) error {
+	url := fmt.Sprintf("%v/%v/%v", client.apiEndpoint, APIVersion, path)
+	resp, err := client.httpClient.Get(url)
+	if err != nil {
+		return fmt.Errorf("failed to get %v: %v", path, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		mainErr := fmt.Errorf("expected %v response, got %v", http.StatusOK, resp.StatusCode)
+		return createResponseMismatchError(resp.Body, mainErr)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read the response body: %v", err)
+	}
+
+	err = json.Unmarshal(body, data)
+	if err != nil {
+		return fmt.Errorf("error unmarshaling response %q: %v", string(body), err)
+	}
+	return nil
+}
+
+func (client *NginxClient) post(path string, input interface{}) error {
+	url := fmt.Sprintf("%v/%v/%v", client.apiEndpoint, APIVersion, path)
+
+	jsonInput, err := json.Marshal(input)
+	if err != nil {
+		return fmt.Errorf("failed to marshall input: %v", err)
+	}
+
+	resp, err := client.httpClient.Post(url, "application/json", bytes.NewBuffer(jsonInput))
+	if err != nil {
+		return fmt.Errorf("failed to post %v: %v", path, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusCreated {
+		mainErr := fmt.Errorf("expected %v response, got %v", http.StatusCreated, resp.StatusCode)
+		return createResponseMismatchError(resp.Body, mainErr)
+	}
+
+	return nil
+}
+
+func (client *NginxClient) delete(path string) error {
+	path = fmt.Sprintf("%v/%v/%v/", client.apiEndpoint, APIVersion, path)
+
+	req, err := http.NewRequest(http.MethodDelete, path, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create a delete request: %v", err)
+	}
+
+	resp, err := client.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to create delete request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		mainErr := fmt.Errorf("failed to complete delete request: expected %v response, got %v",
+			http.StatusOK, resp.StatusCode)
+		return createResponseMismatchError(resp.Body, mainErr)
+	}
+	return nil
+}
+
+// CheckIfStreamUpstreamExists checks if the stream upstream exists in NGINX. If the upstream doesn't exist, it returns the error.
+func (client *NginxClient) CheckIfStreamUpstreamExists(upstream string) error {
+	_, err := client.GetStreamServers(upstream)
+	return err
+}
+
+// GetStreamServers returns the stream servers of the upstream from NGINX.
+func (client *NginxClient) GetStreamServers(upstream string) ([]StreamUpstreamServer, error) {
+	path := fmt.Sprintf("stream/upstreams/%v/servers", upstream)
+
+	var servers []StreamUpstreamServer
+	err := client.get(path, &servers)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get stream servers of upstream server %v: %v", upstream, err)
+	}
+
+	return servers, nil
+}
+
+// AddStreamServer adds the server to the upstream.
+func (client *NginxClient) AddStreamServer(upstream string, server StreamUpstreamServer) error {
+	id, err := client.getIDOfStreamServer(upstream, server.Server)
+
+	if err != nil {
+		return fmt.Errorf("failed to add %v stream server to %v upstream: %v", server.Server, upstream, err)
+	}
+	if id != -1 {
+		return fmt.Errorf("failed to add %v stream server to %v upstream: server already exists", server.Server, upstream)
+	}
+
+	path := fmt.Sprintf("stream/upstreams/%v/servers/", upstream)
+	err = client.post(path, &server)
+
+	if err != nil {
+		return fmt.Errorf("failed to add %v stream server to %v upstream: %v", server.Server, upstream, err)
+	}
+
+	return nil
+}
+
+// DeleteStreamServer the server from the upstream.
+func (client *NginxClient) DeleteStreamServer(upstream string, server string) error {
+	id, err := client.getIDOfStreamServer(upstream, server)
+	if err != nil {
+		return fmt.Errorf("failed to remove %v stream server from  %v upstream: %v", server, upstream, err)
+	}
+	if id == -1 {
+		return fmt.Errorf("failed to remove %v stream server from %v upstream: server doesn't exist", server, upstream)
+	}
+
+	path := fmt.Sprintf("stream/upstreams/%v/servers/%v", upstream, id)
+	err = client.delete(path)
+
+	if err != nil {
+		return fmt.Errorf("failed to remove %v stream server from %v upstream: %v", server, upstream, err)
+	}
+
+	return nil
+}
+
+// UpdateStreamServers updates the servers of the upstream.
+// Servers that are in the slice, but don't exist in NGINX will be added to NGINX.
+// Servers that aren't in the slice, but exist in NGINX, will be removed from NGINX.
+func (client *NginxClient) UpdateStreamServers(upstream string, servers []StreamUpstreamServer) ([]StreamUpstreamServer, []StreamUpstreamServer, error) {
+	serversInNginx, err := client.GetStreamServers(upstream)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to update stream servers of %v upstream: %v", upstream, err)
+	}
+
+	toAdd, toDelete := determineStreamUpdates(servers, serversInNginx)
+
+	for _, server := range toAdd {
+		err := client.AddStreamServer(upstream, server)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to update stream servers of %v upstream: %v", upstream, err)
+		}
+	}
+
+	for _, server := range toDelete {
+		err := client.DeleteStreamServer(upstream, server.Server)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to update stream servers of %v upstream: %v", upstream, err)
+		}
+	}
+
+	return toAdd, toDelete, nil
+}
+
+func (client *NginxClient) getIDOfStreamServer(upstream string, name string) (int64, error) {
+	servers, err := client.GetStreamServers(upstream)
+	if err != nil {
+		return -1, fmt.Errorf("error getting id of stream server %v of upstream %v: %v", name, upstream, err)
+	}
+
+	for _, s := range servers {
+		if s.Server == name {
+			return s.ID, nil
+		}
+	}
+
+	return -1, nil
+}
+
+func determineStreamUpdates(updatedServers []StreamUpstreamServer, nginxServers []StreamUpstreamServer) (toAdd []StreamUpstreamServer, toRemove []StreamUpstreamServer) {
+	for _, server := range updatedServers {
+		found := false
+		for _, serverNGX := range nginxServers {
+			if server.Server == serverNGX.Server {
+				found = true
+				break
+			}
+		}
+		if !found {
+			toAdd = append(toAdd, server)
+		}
+	}
+
+	for _, serverNGX := range nginxServers {
+		found := false
+		for _, server := range updatedServers {
+			if serverNGX.Server == server.Server {
+				found = true
+				break
+			}
+		}
+		if !found {
+			toRemove = append(toRemove, serverNGX)
+		}
+	}
+
+	return
 }

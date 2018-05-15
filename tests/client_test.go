@@ -9,8 +9,188 @@ import (
 )
 
 const (
-	upstream = "test"
+	upstream       = "test"
+	streamUpstream = "stream_test"
 )
+
+func TestStreamClient(t *testing.T) {
+	httpClient := &http.Client{}
+	c, err := client.NewNginxClient(httpClient, "http://127.0.0.1:8080/api")
+
+	if err != nil {
+		t.Fatalf("Error when creating a client: %v", err)
+	}
+
+	streamServer := client.StreamUpstreamServer{
+		Server: "127.0.0.1:8001",
+	}
+	// test adding a stream server
+
+	err = c.AddStreamServer(streamUpstream, streamServer)
+
+	if err != nil {
+		t.Fatalf("Error when adding a server: %v", err)
+	}
+
+	err = c.AddStreamServer(streamUpstream, streamServer)
+
+	if err == nil {
+		t.Errorf("Adding a duplicated server succeeded")
+	}
+
+	// test deleting a stream server
+
+	err = c.DeleteStreamServer(streamUpstream, streamServer.Server)
+	if err != nil {
+		t.Fatalf("Error when deleting a server: %v", err)
+	}
+
+	err = c.DeleteStreamServer(streamUpstream, streamServer.Server)
+	if err == nil {
+		t.Errorf("Deleting a nonexisting server succeeded")
+	}
+
+	streamServers, err := c.GetStreamServers(streamUpstream)
+	if len(streamServers) != 0 {
+		t.Errorf("Expected 0 servers, got %v", streamServers)
+	}
+
+	// test updating stream servers
+	streamServers1 := []client.StreamUpstreamServer{
+		client.StreamUpstreamServer{
+			Server: "127.0.0.2:8001",
+		},
+		client.StreamUpstreamServer{
+			Server: "127.0.0.2:8002",
+		},
+		client.StreamUpstreamServer{
+			Server: "127.0.0.2:8003",
+		},
+	}
+
+	streamAdded, streamDeleted, err := c.UpdateStreamServers(streamUpstream, streamServers1)
+
+	if err != nil {
+		t.Fatalf("Error when updating servers: %v", err)
+	}
+	if len(streamAdded) != len(streamServers1) {
+		t.Errorf("The number of added servers %v != %v", len(streamAdded), len(streamServers1))
+	}
+	if len(streamDeleted) != 0 {
+		t.Errorf("The number of deleted servers %v != 0", len(streamDeleted))
+	}
+
+	// test getting servers
+
+	streamServers, err = c.GetStreamServers(streamUpstream)
+	if err != nil {
+		t.Fatalf("Error when getting servers: %v", err)
+	}
+	if !compareStreamUpstreamServers(streamServers1, streamServers) {
+		t.Errorf("Return servers %v != added servers %v", streamServers, streamServers1)
+	}
+
+	// updating with the same servers
+
+	added, deleted, err := c.UpdateStreamServers(streamUpstream, streamServers1)
+
+	if err != nil {
+		t.Fatalf("Error when updating servers: %v", err)
+	}
+	if len(added) != 0 {
+		t.Errorf("The number of added servers %v != 0", len(added))
+	}
+	if len(deleted) != 0 {
+		t.Errorf("The number of deleted servers %v != 0", len(deleted))
+	}
+
+	streamServers2 := []client.StreamUpstreamServer{
+		client.StreamUpstreamServer{
+			Server: "127.0.0.2:8003",
+		},
+		client.StreamUpstreamServer{
+			Server: "127.0.0.2:8004",
+		}, client.StreamUpstreamServer{
+			Server: "127.0.0.2:8005",
+		},
+	}
+
+	// updating with 2 new servers, 1 existing
+
+	added, deleted, err = c.UpdateStreamServers(streamUpstream, streamServers2)
+
+	if err != nil {
+		t.Fatalf("Error when updating servers: %v", err)
+	}
+	if len(added) != 2 {
+		t.Errorf("The number of added servers %v != 2", len(added))
+	}
+	if len(deleted) != 2 {
+		t.Errorf("The number of deleted servers %v != 2", len(deleted))
+	}
+
+	// updating with zero servers - removing
+
+	added, deleted, err = c.UpdateStreamServers(streamUpstream, []client.StreamUpstreamServer{})
+
+	if err != nil {
+		t.Fatalf("Error when updating servers: %v", err)
+	}
+	if len(added) != 0 {
+		t.Errorf("The number of added servers %v != 0", len(added))
+	}
+	if len(deleted) != 3 {
+		t.Errorf("The number of deleted servers %v != 3", len(deleted))
+	}
+
+	// test getting servers again
+
+	servers, err := c.GetStreamServers(streamUpstream)
+	if err != nil {
+		t.Fatalf("Error when getting servers: %v", err)
+	}
+
+	if len(servers) != 0 {
+		t.Errorf("The number of servers %v != 0", len(servers))
+	}
+}
+
+// Test adding the slow_start property on an upstream server
+func TestStreamUpstreamServerSlowStart(t *testing.T) {
+	httpClient := &http.Client{}
+	c, err := client.NewNginxClient(httpClient, "http://127.0.0.1:8080/api")
+	if err != nil {
+		t.Fatalf("Error connecting to nginx: %v", err)
+	}
+
+	// Add a server with slow_start
+	// (And FailTimeout, since the default is 10s)
+	streamServer := client.StreamUpstreamServer{
+		Server:      "127.0.0.1:2000",
+		SlowStart:   "11s",
+		FailTimeout: "10s",
+	}
+	err = c.AddStreamServer(streamUpstream, streamServer)
+	if err != nil {
+		t.Errorf("Error adding upstream server: %v", err)
+	}
+	servers, err := c.GetStreamServers(streamUpstream)
+	if len(servers) != 1 {
+		t.Errorf("Too many servers")
+	}
+	// don't compare IDs
+	servers[0].ID = 0
+
+	if !reflect.DeepEqual(streamServer, servers[0]) {
+		t.Errorf("Expected: %v Got: %v", streamServer, servers[0])
+	}
+
+	// remove upstream servers
+	_, _, err = c.UpdateStreamServers(streamUpstream, []client.StreamUpstreamServer{})
+	if err != nil {
+		t.Errorf("Couldn't remove servers: %v", err)
+	}
+}
 
 func TestClient(t *testing.T) {
 	httpClient := &http.Client{}
@@ -36,7 +216,7 @@ func TestClient(t *testing.T) {
 		Server: "127.0.0.1:8001",
 	}
 
-	// test adding an http server
+	// test adding a http server
 
 	err = c.AddHTTPServer(upstream, server)
 
@@ -50,7 +230,7 @@ func TestClient(t *testing.T) {
 		t.Errorf("Adding a duplicated server succeeded")
 	}
 
-	// test deleting an http server
+	// test deleting a http server
 
 	err = c.DeleteHTTPServer(upstream, server.Server)
 	if err != nil {
@@ -65,7 +245,7 @@ func TestClient(t *testing.T) {
 	// test updating servers
 	servers1 := []client.UpstreamServer{
 		client.UpstreamServer{
-			Server:    "127.0.0.2:8001",
+			Server: "127.0.0.2:8001",
 		},
 		client.UpstreamServer{
 			Server: "127.0.0.2:8002",
@@ -163,6 +343,7 @@ func TestClient(t *testing.T) {
 		t.Errorf("The number of servers %v != 0", len(servers))
 	}
 }
+
 // Test adding the slow_start property on an upstream server
 func TestUpstreamServerSlowStart(t *testing.T) {
 	httpClient := &http.Client{}
@@ -201,6 +382,19 @@ func TestUpstreamServerSlowStart(t *testing.T) {
 }
 
 func compareUpstreamServers(x []client.UpstreamServer, y []client.UpstreamServer) bool {
+	var xServers []string
+	for _, us := range x {
+		xServers = append(xServers, us.Server)
+	}
+	var yServers []string
+	for _, us := range y {
+		yServers = append(yServers, us.Server)
+	}
+
+	return reflect.DeepEqual(xServers, yServers)
+}
+
+func compareStreamUpstreamServers(x []client.StreamUpstreamServer, y []client.StreamUpstreamServer) bool {
 	var xServers []string
 	for _, us := range x {
 		xServers = append(xServers, us.Server)

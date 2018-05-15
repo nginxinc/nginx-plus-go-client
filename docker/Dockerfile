@@ -51,5 +51,6 @@ STOPSIGNAL SIGTERM
 
 RUN rm -rf /etc/nginx/conf.d/*
 COPY test.conf /etc/nginx/conf.d/
+COPY nginx.conf /etc/nginx/
 
 CMD ["nginx", "-g", "daemon off;"]
