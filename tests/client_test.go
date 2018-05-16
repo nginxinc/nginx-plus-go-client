@@ -388,6 +388,15 @@ func TestStats(t *testing.T) {
 		t.Fatalf("Error connecting to nginx: %v", err)
 	}
 
+	// need upstream for stats
+	server := client.UpstreamServer{
+		Server: "127.0.0.1:2000",
+	}
+	err = c.AddHTTPServer(upstream, server)
+	if err != nil {
+		t.Errorf("Error adding upstream server: %v", err)
+	}
+
 	stats, err := c.GetStats()
 	if err != nil {
 		t.Errorf("Error getting stats: %v", err)
@@ -409,6 +418,23 @@ func TestStats(t *testing.T) {
 		}
 	} else {
 		t.Errorf("ServerZone 'test' not found")
+	}
+	if ups, ok := stats.Upstreams["test"]; ok {
+		if len(ups.Peers) < 1 {
+			t.Errorf("upstream server not visible in stats")
+		} else {
+			if ups.Peers[0].State != "up" {
+				t.Errorf("upstream server state should be 'up'")
+			}
+		}
+	} else {
+		t.Errorf("Upstream 'test' not found")
+	}
+
+	// cleanup upstream servers
+	_, _, err = c.UpdateHTTPServers(upstream, []client.UpstreamServer{})
+	if err != nil {
+		t.Errorf("Couldn't remove servers: %v", err)
 	}
 }
 
