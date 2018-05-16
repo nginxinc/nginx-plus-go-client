@@ -381,6 +381,37 @@ func TestUpstreamServerSlowStart(t *testing.T) {
 	}
 }
 
+func TestStats(t *testing.T) {
+	httpClient := &http.Client{}
+	c, err := client.NewNginxClient(httpClient, "http://127.0.0.1:8080/api")
+	if err != nil {
+		t.Fatalf("Error connecting to nginx: %v", err)
+	}
+
+	stats, err := c.GetStats()
+	if err != nil {
+		t.Errorf("Error getting stats: %v", err)
+	}
+
+	if stats.Connections.Accepted < 1 {
+		t.Errorf("Bad connections: %v", stats.Connections)
+	}
+	if stats.HTTPRequests.Total < 1 {
+		t.Errorf("Bad HTTPRequests: %v", stats.HTTPRequests)
+	}
+	// SSL metrics blank in this example
+	if len(stats.ServerZones) < 1 {
+		t.Errorf("No ServerZone metrics: %v", stats.ServerZones)
+	}
+	if val, ok := stats.ServerZones["test"]; ok {
+		if val.Requests < 1 {
+			t.Errorf("ServerZone stats missing: %v", val)
+		}
+	} else {
+		t.Errorf("ServerZone 'test' not found")
+	}
+}
+
 func compareUpstreamServers(x []client.UpstreamServer, y []client.UpstreamServer) bool {
 	var xServers []string
 	for _, us := range x {

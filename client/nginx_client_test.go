@@ -107,7 +107,7 @@ func TestDetermineUpdates(t *testing.T) {
 				Server: "10.0.0.3:80",
 			},
 		}}, {
-	// empty values
+		// empty values
 	}}
 
 	for _, test := range tests {
