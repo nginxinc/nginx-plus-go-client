@@ -146,11 +146,11 @@ type Peer struct {
 	Fails        uint64
 	Unavail      uint64
 	HealthChecks HealthChecks
-	Downtime     int
+	Downtime     uint64
 	Downstart    string
 	Selected     string
-	HeaderTime   int `json:"header_time"`
-	ResponseTime int `json:"response_time"`
+	HeaderTime   uint64 `json:"header_time"`
+	ResponseTime uint64 `json:"response_time"`
 }
 
 // HealthChecks metrics
