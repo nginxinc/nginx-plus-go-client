@@ -51,6 +51,9 @@ func TestStreamClient(t *testing.T) {
 	}
 
 	streamServers, err := c.GetStreamServers(streamUpstream)
+	if err != nil {
+		t.Errorf("Error getting stream servers: %v", err)
+	}
 	if len(streamServers) != 0 {
 		t.Errorf("Expected 0 servers, got %v", streamServers)
 	}
@@ -175,6 +178,9 @@ func TestStreamUpstreamServerSlowStart(t *testing.T) {
 		t.Errorf("Error adding upstream server: %v", err)
 	}
 	servers, err := c.GetStreamServers(streamUpstream)
+	if err != nil {
+		t.Errorf("Error getting stream servers: %v", err)
+	}
 	if len(servers) != 1 {
 		t.Errorf("Too many servers")
 	}

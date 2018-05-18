@@ -9,10 +9,10 @@ import (
 	"net/http"
 )
 
-// APIVersion is a version of NGINX Plus API
+// APIVersion is a version of NGINX Plus API.
 const APIVersion = 2
 
-// NginxClient lets you add/remove servers to/from NGINX Plus via its API
+// NginxClient lets you add/remove servers to/from NGINX Plus via its API.
 type NginxClient struct {
 	apiEndpoint string
 	httpClient  *http.Client
@@ -20,7 +20,7 @@ type NginxClient struct {
 
 type versions []int
 
-// UpstreamServer lets you configure HTTP upstreams
+// UpstreamServer lets you configure HTTP upstreams.
 type UpstreamServer struct {
 	ID          int    `json:"id,omitempty"`
 	Server      string `json:"server"`
@@ -29,7 +29,7 @@ type UpstreamServer struct {
 	SlowStart   string `json:"slow_start,omitempty"`
 }
 
-// StreamUpstreamServer lets you configure Stream upstreams
+// StreamUpstreamServer lets you configure Stream upstreams.
 type StreamUpstreamServer struct {
 	ID          int64  `json:"id,omitempty"`
 	Server      string `json:"server"`
@@ -57,7 +57,8 @@ type apiError struct {
 	Code   string
 }
 
-// Stats holds NGINX Plus metrics
+// Stats represents NGINX Plus stats fetched from the NGINX Plus API.
+// https://nginx.org/en/docs/http/ngx_http_api_module.html
 type Stats struct {
 	Connections  Connections
 	HTTPRequests HTTPRequests
@@ -66,7 +67,7 @@ type Stats struct {
 	Upstreams    Upstreams
 }
 
-// Connections related metrics
+// Connections represents connection related stats.
 type Connections struct {
 	Accepted uint64
 	Dropped  uint64
@@ -74,23 +75,23 @@ type Connections struct {
 	Idle     uint64
 }
 
-// HTTPRequests related metrics
+// HTTPRequests represents HTTP request related stats.
 type HTTPRequests struct {
 	Total   uint64
 	Current uint64
 }
 
-// SSL related metrics
+// SSL represents SSL related stats.
 type SSL struct {
 	Handshakes       uint64
 	HandshakesFailed uint64 `json:"handshakes_failed"`
 	SessionReuses    uint64 `json:"session_reuses"`
 }
 
-// ServerZones ...
+// ServerZones is map of server zone stats by zone name
 type ServerZones map[string]ServerZone
 
-// ServerZone related metrics
+// ServerZone represents server zone related stats.
 type ServerZone struct {
 	Processing uint64
 	Requests   uint64
@@ -100,7 +101,7 @@ type ServerZone struct {
 	Sent       uint64
 }
 
-// Responses related metrics
+// Responses represents HTTP reponse related stats.
 type Responses struct {
 	Responses1xx uint64 `json:"1xx"`
 	Responses2xx uint64 `json:"2xx"`
@@ -109,10 +110,10 @@ type Responses struct {
 	Responses5xx uint64 `json:"5xx"`
 }
 
-// Upstreams ...
+// Upstreams is a map of upstream stats by upstream name.
 type Upstreams map[string]Upstream
 
-// Upstream related metrics
+// Upstream represents upstream related stats.
 type Upstream struct {
 	Peers      []Peer
 	Keepalives int
@@ -121,14 +122,14 @@ type Upstream struct {
 	Queue      Queue
 }
 
-// Queue related metrics
+// Queue represents queue related stats for an upstream.
 type Queue struct {
 	Size      int
 	MaxSize   int `json:"max_size"`
 	Overflows uint64
 }
 
-// Peer related metrics
+// Peer represents peer (upstream server) related stats.
 type Peer struct {
 	ID           int
 	Server       string
@@ -153,7 +154,7 @@ type Peer struct {
 	ResponseTime uint64 `json:"response_time"`
 }
 
-// HealthChecks related metrics
+// HealthChecks represents health check related stats for a peer.
 type HealthChecks struct {
 	Checks     uint64
 	Fails      uint64
@@ -570,7 +571,7 @@ func determineStreamUpdates(updatedServers []StreamUpstreamServer, nginxServers 
 	return
 }
 
-// GetStats gets stats from the NGINX Plus API
+// GetStats gets connection, request, ssl, zone, and upstream related stats from the NGINX Plus API.
 func (client *NginxClient) GetStats() (*Stats, error) {
 	cons, err := client.getConnections()
 	if err != nil {
