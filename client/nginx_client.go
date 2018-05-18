@@ -57,7 +57,7 @@ type apiError struct {
 	Code   string
 }
 
-// Stats for fetching metrics from API
+// Stats holds NGINX Plus metrics
 type Stats struct {
 	Connections  Connections
 	HTTPRequests HTTPRequests
@@ -66,7 +66,7 @@ type Stats struct {
 	Upstreams    Upstreams
 }
 
-// Connections metrics
+// Connections related metrics
 type Connections struct {
 	Accepted uint64
 	Dropped  uint64
@@ -74,23 +74,23 @@ type Connections struct {
 	Idle     uint64
 }
 
-// HTTPRequests metrics
+// HTTPRequests related metrics
 type HTTPRequests struct {
 	Total   uint64
 	Current uint64
 }
 
-// SSL metrics
+// SSL related metrics
 type SSL struct {
 	Handshakes       uint64
 	HandshakesFailed uint64 `json:"handshakes_failed"`
 	SessionReuses    uint64 `json:"session_reuses"`
 }
 
-// ServerZones collection
+// ServerZones ...
 type ServerZones map[string]ServerZone
 
-// ServerZone metrics
+// ServerZone related metrics
 type ServerZone struct {
 	Processing uint64
 	Requests   uint64
@@ -100,7 +100,7 @@ type ServerZone struct {
 	Sent       uint64
 }
 
-// Responses metrics
+// Responses related metrics
 type Responses struct {
 	Responses1xx uint64 `json:"1xx"`
 	Responses2xx uint64 `json:"2xx"`
@@ -109,10 +109,10 @@ type Responses struct {
 	Responses5xx uint64 `json:"5xx"`
 }
 
-// Upstreams collection
+// Upstreams ...
 type Upstreams map[string]Upstream
 
-// Upstream metrics
+// Upstream related metrics
 type Upstream struct {
 	Peers      []Peer
 	Keepalives int
@@ -121,14 +121,14 @@ type Upstream struct {
 	Queue      Queue
 }
 
-// Queue metrics
+// Queue related metrics
 type Queue struct {
 	Size      int
 	MaxSize   int `json:"max_size"`
 	Overflows uint64
 }
 
-// Peer metrics
+// Peer related metrics
 type Peer struct {
 	ID           int
 	Server       string
@@ -153,7 +153,7 @@ type Peer struct {
 	ResponseTime uint64 `json:"response_time"`
 }
 
-// HealthChecks metrics
+// HealthChecks related metrics
 type HealthChecks struct {
 	Checks     uint64
 	Fails      uint64
@@ -570,29 +570,29 @@ func determineStreamUpdates(updatedServers []StreamUpstreamServer, nginxServers 
 	return
 }
 
-// GetStats fetches metrics from the NGINX Plus API
+// GetStats gets stats from the NGINX Plus API
 func (client *NginxClient) GetStats() (*Stats, error) {
-	cons, err := client.GetConnections()
+	cons, err := client.getConnections()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get stats: %v", err)
 	}
 
-	requests, err := client.GetHTTPRequests()
+	requests, err := client.getHTTPRequests()
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get stats: %v", err)
 	}
 
-	ssl, err := client.GetSSL()
+	ssl, err := client.getSSL()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get stats: %v", err)
 	}
 
-	zones, err := client.GetServerZones()
+	zones, err := client.getServerZones()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get stats: %v", err)
 	}
 
-	upstreams, err := client.GetUpstreams()
+	upstreams, err := client.getUpstreams()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get stats: %v", err)
 	}
@@ -606,8 +606,7 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 	}, nil
 }
 
-// GetConnections fetches connection metrics
-func (client *NginxClient) GetConnections() (*Connections, error) {
+func (client *NginxClient) getConnections() (*Connections, error) {
 	var cons Connections
 	err := client.get("connections", &cons)
 	if err != nil {
@@ -616,8 +615,7 @@ func (client *NginxClient) GetConnections() (*Connections, error) {
 	return &cons, nil
 }
 
-// GetHTTPRequests metrics
-func (client *NginxClient) GetHTTPRequests() (*HTTPRequests, error) {
+func (client *NginxClient) getHTTPRequests() (*HTTPRequests, error) {
 	var requests HTTPRequests
 
 	err := client.get("http/requests", &requests)
@@ -628,8 +626,7 @@ func (client *NginxClient) GetHTTPRequests() (*HTTPRequests, error) {
 	return &requests, nil
 }
 
-// GetSSL metrics
-func (client *NginxClient) GetSSL() (*SSL, error) {
+func (client *NginxClient) getSSL() (*SSL, error) {
 	var ssl SSL
 	err := client.get("ssl", &ssl)
 	if err != nil {
@@ -638,8 +635,7 @@ func (client *NginxClient) GetSSL() (*SSL, error) {
 	return &ssl, nil
 }
 
-// GetServerZones metrics
-func (client *NginxClient) GetServerZones() (*ServerZones, error) {
+func (client *NginxClient) getServerZones() (*ServerZones, error) {
 	var zones ServerZones
 	err := client.get("http/server_zones", &zones)
 	if err != nil {
@@ -648,8 +644,7 @@ func (client *NginxClient) GetServerZones() (*ServerZones, error) {
 	return &zones, err
 }
 
-// GetUpstreams metrics
-func (client *NginxClient) GetUpstreams() (*Upstreams, error) {
+func (client *NginxClient) getUpstreams() (*Upstreams, error) {
 	var upstreams Upstreams
 	err := client.get("http/upstreams", &upstreams)
 	if err != nil {

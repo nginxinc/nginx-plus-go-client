@@ -364,6 +364,9 @@ func TestUpstreamServerSlowStart(t *testing.T) {
 		t.Errorf("Error adding upstream server: %v", err)
 	}
 	servers, err := c.GetHTTPServers(upstream)
+	if err != nil {
+		t.Errorf("Error getting HTTPServers: %v", err)
+	}
 	if len(servers) != 1 {
 		t.Errorf("Too many servers")
 	}
