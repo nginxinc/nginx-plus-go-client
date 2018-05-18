@@ -51,6 +51,9 @@ func TestStreamClient(t *testing.T) {
 	}
 
 	streamServers, err := c.GetStreamServers(streamUpstream)
+	if err != nil {
+		t.Errorf("Error getting stream servers: %v", err)
+	}
 	if len(streamServers) != 0 {
 		t.Errorf("Expected 0 servers, got %v", streamServers)
 	}
@@ -175,6 +178,9 @@ func TestStreamUpstreamServerSlowStart(t *testing.T) {
 		t.Errorf("Error adding upstream server: %v", err)
 	}
 	servers, err := c.GetStreamServers(streamUpstream)
+	if err != nil {
+		t.Errorf("Error getting stream servers: %v", err)
+	}
 	if len(servers) != 1 {
 		t.Errorf("Too many servers")
 	}
@@ -364,6 +370,9 @@ func TestUpstreamServerSlowStart(t *testing.T) {
 		t.Errorf("Error adding upstream server: %v", err)
 	}
 	servers, err := c.GetHTTPServers(upstream)
+	if err != nil {
+		t.Errorf("Error getting HTTPServers: %v", err)
+	}
 	if len(servers) != 1 {
 		t.Errorf("Too many servers")
 	}
@@ -375,6 +384,63 @@ func TestUpstreamServerSlowStart(t *testing.T) {
 	}
 
 	// remove upstream servers
+	_, _, err = c.UpdateHTTPServers(upstream, []client.UpstreamServer{})
+	if err != nil {
+		t.Errorf("Couldn't remove servers: %v", err)
+	}
+}
+
+func TestStats(t *testing.T) {
+	httpClient := &http.Client{}
+	c, err := client.NewNginxClient(httpClient, "http://127.0.0.1:8080/api")
+	if err != nil {
+		t.Fatalf("Error connecting to nginx: %v", err)
+	}
+
+	// need upstream for stats
+	server := client.UpstreamServer{
+		Server: "127.0.0.1:2000",
+	}
+	err = c.AddHTTPServer(upstream, server)
+	if err != nil {
+		t.Errorf("Error adding upstream server: %v", err)
+	}
+
+	stats, err := c.GetStats()
+	if err != nil {
+		t.Errorf("Error getting stats: %v", err)
+	}
+
+	if stats.Connections.Accepted < 1 {
+		t.Errorf("Bad connections: %v", stats.Connections)
+	}
+	if stats.HTTPRequests.Total < 1 {
+		t.Errorf("Bad HTTPRequests: %v", stats.HTTPRequests)
+	}
+	// SSL metrics blank in this example
+	if len(stats.ServerZones) < 1 {
+		t.Errorf("No ServerZone metrics: %v", stats.ServerZones)
+	}
+	if val, ok := stats.ServerZones["test"]; ok {
+		if val.Requests < 1 {
+			t.Errorf("ServerZone stats missing: %v", val)
+		}
+	} else {
+		t.Errorf("ServerZone 'test' not found")
+	}
+	if ups, ok := stats.Upstreams["test"]; ok {
+		if len(ups.Peers) < 1 {
+			t.Errorf("upstream server not visible in stats")
+		} else {
+			if ups.Peers[0].State != "up" {
+				t.Errorf("upstream server state should be 'up'")
+			}
+		}
+	} else {
+		t.Errorf("Upstream 'test' not found")
+	}
+
+	// cleanup upstream servers
 	_, _, err = c.UpdateHTTPServers(upstream, []client.UpstreamServer{})
 	if err != nil {
 		t.Errorf("Couldn't remove servers: %v", err)

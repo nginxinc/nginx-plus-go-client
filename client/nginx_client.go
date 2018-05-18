@@ -9,10 +9,10 @@ import (
 	"net/http"
 )
 
-// APIVersion is a version of NGINX Plus API
+// APIVersion is a version of NGINX Plus API.
 const APIVersion = 2
 
-// NginxClient lets you add/remove servers to/from NGINX Plus via its API
+// NginxClient lets you add/remove servers to/from NGINX Plus via its API.
 type NginxClient struct {
 	apiEndpoint string
 	httpClient  *http.Client
@@ -20,16 +20,16 @@ type NginxClient struct {
 
 type versions []int
 
-// UpstreamServer lets you configure HTTP upstreams
+// UpstreamServer lets you configure HTTP upstreams.
 type UpstreamServer struct {
-	ID          int64  `json:"id,omitempty"`
+	ID          int    `json:"id,omitempty"`
 	Server      string `json:"server"`
-	MaxFails    int64  `json:"max_fails"`
+	MaxFails    int    `json:"max_fails"`
 	FailTimeout string `json:"fail_timeout,omitempty"`
 	SlowStart   string `json:"slow_start,omitempty"`
 }
 
-// StreamUpstreamServer lets you configure Stream upstreams
+// StreamUpstreamServer lets you configure Stream upstreams.
 type StreamUpstreamServer struct {
 	ID          int64  `json:"id,omitempty"`
 	Server      string `json:"server"`
@@ -55,6 +55,111 @@ type apiError struct {
 	Status int
 	Text   string
 	Code   string
+}
+
+// Stats represents NGINX Plus stats fetched from the NGINX Plus API.
+// https://nginx.org/en/docs/http/ngx_http_api_module.html
+type Stats struct {
+	Connections  Connections
+	HTTPRequests HTTPRequests
+	SSL          SSL
+	ServerZones  ServerZones
+	Upstreams    Upstreams
+}
+
+// Connections represents connection related stats.
+type Connections struct {
+	Accepted uint64
+	Dropped  uint64
+	Active   uint64
+	Idle     uint64
+}
+
+// HTTPRequests represents HTTP request related stats.
+type HTTPRequests struct {
+	Total   uint64
+	Current uint64
+}
+
+// SSL represents SSL related stats.
+type SSL struct {
+	Handshakes       uint64
+	HandshakesFailed uint64 `json:"handshakes_failed"`
+	SessionReuses    uint64 `json:"session_reuses"`
+}
+
+// ServerZones is map of server zone stats by zone name
+type ServerZones map[string]ServerZone
+
+// ServerZone represents server zone related stats.
+type ServerZone struct {
+	Processing uint64
+	Requests   uint64
+	Responses  Responses
+	Discarded  uint64
+	Received   uint64
+	Sent       uint64
+}
+
+// Responses represents HTTP reponse related stats.
+type Responses struct {
+	Responses1xx uint64 `json:"1xx"`
+	Responses2xx uint64 `json:"2xx"`
+	Responses3xx uint64 `json:"3xx"`
+	Responses4xx uint64 `json:"4xx"`
+	Responses5xx uint64 `json:"5xx"`
+}
+
+// Upstreams is a map of upstream stats by upstream name.
+type Upstreams map[string]Upstream
+
+// Upstream represents upstream related stats.
+type Upstream struct {
+	Peers      []Peer
+	Keepalives int
+	Zombies    int
+	Zone       string
+	Queue      Queue
+}
+
+// Queue represents queue related stats for an upstream.
+type Queue struct {
+	Size      int
+	MaxSize   int `json:"max_size"`
+	Overflows uint64
+}
+
+// Peer represents peer (upstream server) related stats.
+type Peer struct {
+	ID           int
+	Server       string
+	Service      string
+	Name         string
+	Backup       bool
+	Weight       int
+	State        string
+	Active       uint64
+	MaxConns     int `json:"max_conns"`
+	Requests     uint64
+	Responses    Responses
+	Sent         uint64
+	Received     uint64
+	Fails        uint64
+	Unavail      uint64
+	HealthChecks HealthChecks
+	Downtime     uint64
+	Downstart    string
+	Selected     string
+	HeaderTime   uint64 `json:"header_time"`
+	ResponseTime uint64 `json:"response_time"`
+}
+
+// HealthChecks represents health check related stats for a peer.
+type HealthChecks struct {
+	Checks     uint64
+	Fails      uint64
+	Unhealthy  uint64
+	LastPassed bool `json:"last_passed"`
 }
 
 // NewNginxClient creates an NginxClient.
@@ -250,7 +355,7 @@ func determineUpdates(updatedServers []UpstreamServer, nginxServers []UpstreamSe
 	return
 }
 
-func (client *NginxClient) getIDOfHTTPServer(upstream string, name string) (int64, error) {
+func (client *NginxClient) getIDOfHTTPServer(upstream string, name string) (int, error) {
 	servers, err := client.GetHTTPServers(upstream)
 	if err != nil {
 		return -1, fmt.Errorf("error getting id of server %v of upstream %v: %v", name, upstream, err)
@@ -464,4 +569,87 @@ func determineStreamUpdates(updatedServers []StreamUpstreamServer, nginxServers 
 	}
 
 	return
+}
+
+// GetStats gets connection, request, ssl, zone, and upstream related stats from the NGINX Plus API.
+func (client *NginxClient) GetStats() (*Stats, error) {
+	cons, err := client.getConnections()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get stats: %v", err)
+	}
+
+	requests, err := client.getHTTPRequests()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get stats: %v", err)
+	}
+
+	ssl, err := client.getSSL()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get stats: %v", err)
+	}
+
+	zones, err := client.getServerZones()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get stats: %v", err)
+	}
+
+	upstreams, err := client.getUpstreams()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get stats: %v", err)
+	}
+
+	return &Stats{
+		Connections:  *cons,
+		HTTPRequests: *requests,
+		SSL:          *ssl,
+		ServerZones:  *zones,
+		Upstreams:    *upstreams,
+	}, nil
+}
+
+func (client *NginxClient) getConnections() (*Connections, error) {
+	var cons Connections
+	err := client.get("connections", &cons)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get connections: %v", err)
+	}
+	return &cons, nil
+}
+
+func (client *NginxClient) getHTTPRequests() (*HTTPRequests, error) {
+	var requests HTTPRequests
+
+	err := client.get("http/requests", &requests)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get http requests: %v", err)
+	}
+
+	return &requests, nil
+}
+
+func (client *NginxClient) getSSL() (*SSL, error) {
+	var ssl SSL
+	err := client.get("ssl", &ssl)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ssl: %v", err)
+	}
+	return &ssl, nil
+}
+
+func (client *NginxClient) getServerZones() (*ServerZones, error) {
+	var zones ServerZones
+	err := client.get("http/server_zones", &zones)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get server zones: %v", err)
+	}
+	return &zones, err
+}
+
+func (client *NginxClient) getUpstreams() (*Upstreams, error) {
+	var upstreams Upstreams
+	err := client.get("http/upstreams", &upstreams)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get upstreams: %v", err)
+	}
+	return &upstreams, nil
 }
