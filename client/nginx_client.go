@@ -12,7 +12,7 @@ import (
 // APIVersion is a version of NGINX Plus API.
 const APIVersion = 2
 
-// NginxClient lets you add/remove servers to/from NGINX Plus via its API.
+// NginxClient lets you access NGINX Plus via its API.
 type NginxClient struct {
 	apiEndpoint string
 	httpClient  *http.Client
@@ -108,6 +108,7 @@ type Responses struct {
 	Responses3xx uint64 `json:"3xx"`
 	Responses4xx uint64 `json:"4xx"`
 	Responses5xx uint64 `json:"5xx"`
+	Total        uint64 `json:"total"`
 }
 
 // Upstreams is a map of upstream stats by upstream name.
@@ -146,7 +147,7 @@ type Peer struct {
 	Received     uint64
 	Fails        uint64
 	Unavail      uint64
-	HealthChecks HealthChecks
+	HealthChecks HealthChecks `json:"health_checks"`
 	Downtime     uint64
 	Downstart    string
 	Selected     string
