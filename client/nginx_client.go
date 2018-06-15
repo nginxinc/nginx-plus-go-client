@@ -12,7 +12,7 @@ import (
 // APIVersion is a version of NGINX Plus API.
 const APIVersion = 2
 
-// NginxClient lets you access NGINX Plus via its API.
+// NginxClient lets you access NGINX Plus API.
 type NginxClient struct {
 	apiEndpoint string
 	httpClient  *http.Client
@@ -108,7 +108,7 @@ type Responses struct {
 	Responses3xx uint64 `json:"3xx"`
 	Responses4xx uint64 `json:"4xx"`
 	Responses5xx uint64 `json:"5xx"`
-	Total        uint64 `json:"total"`
+	Total        uint64
 }
 
 // Upstreams is a map of upstream stats by upstream name.

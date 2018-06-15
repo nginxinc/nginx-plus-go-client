@@ -436,7 +436,7 @@ func TestStats(t *testing.T) {
 				t.Errorf("upstream server state should be 'up'")
 			}
 			if ups.Peers[0].Responses.Total < 0 {
-				t.Errorf("Upstream should have total responses value")
+				t.Errorf("upstream should have total responses value")
 			}
 			if ups.Peers[0].HealthChecks.LastPassed {
 				t.Errorf("upstream server health check should report last failed")
