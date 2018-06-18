@@ -31,9 +31,9 @@ type UpstreamServer struct {
 
 // StreamUpstreamServer lets you configure Stream upstreams.
 type StreamUpstreamServer struct {
-	ID          int64  `json:"id,omitempty"`
+	ID          int    `json:"id,omitempty"`
 	Server      string `json:"server"`
-	MaxFails    int64  `json:"max_fails"`
+	MaxFails    int    `json:"max_fails"`
 	FailTimeout string `json:"fail_timeout,omitempty"`
 	SlowStart   string `json:"slow_start,omitempty"`
 }
@@ -527,7 +527,7 @@ func (client *NginxClient) UpdateStreamServers(upstream string, servers []Stream
 	return toAdd, toDelete, nil
 }
 
-func (client *NginxClient) getIDOfStreamServer(upstream string, name string) (int64, error) {
+func (client *NginxClient) getIDOfStreamServer(upstream string, name string) (int, error) {
 	servers, err := client.GetStreamServers(upstream)
 	if err != nil {
 		return -1, fmt.Errorf("error getting id of stream server %v of upstream %v: %v", name, upstream, err)
