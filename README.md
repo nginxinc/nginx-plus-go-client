@@ -33,4 +33,7 @@ Run Tests:
 $ make test
 ```
 
-This will build and run an NGINX Plus container, execute the SDK tests against NGINX Plus API, and then clean up:
+This will build and run an NGINX Plus container, execute the SDK tests against NGINX Plus API, and then clean up. If it fails and you want to clean up (i.e. stop the running container), please use `$ make clean`
+
+## Support
+This project is not covered by the NGINX Plus support contract
