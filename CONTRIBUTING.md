@@ -23,7 +23,7 @@ We will have a public forum soon where you can come and ask questions and have a
 
 ## Getting Started
 
-Read the usage and testing steps in the [README](https://github.com/nginxinc/nginx-plus-go-sdk/blob/master/README.md).
+Read the usage and testing steps in the [README](README.md).
 
 
 ## Contributing
@@ -39,7 +39,7 @@ To suggest an enhancement, please create an issue on GitHub with the label `enha
 ### Open a Pull Request
 
 * Fork the repo, create a branch, submit a PR when your changes are tested and ready for review
-* You will be asked to fill in [our pull request template](https://github.com/nginxinc/nginx-plus-go-sdk/blob/master/.github/PULL_REQUEST_TEMPLATE.md)
+* You will be asked to fill in [our pull request template](.github/ISSUE_TEMPLATE/PULL_REQUEST_TEMPLATE.md)
 
 Note: if you’d like to implement a new feature, please consider creating a feature request issue first to start a discussion about the feature.
 
