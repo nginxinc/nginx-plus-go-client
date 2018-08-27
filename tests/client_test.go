@@ -453,6 +453,75 @@ func TestStats(t *testing.T) {
 	}
 }
 
+func TestStreamStats(t *testing.T) {
+	httpClient := &http.Client{}
+	c, err := client.NewNginxClient(httpClient, "http://127.0.0.1:8080/api")
+	if err != nil {
+		t.Fatalf("Error connecting to nginx: %v", err)
+	}
+
+	// need upstream for stats
+	server := client.StreamUpstreamServer{
+		Server: "127.0.0.1:8080",
+	}
+	err = c.AddStreamServer(streamUpstream, server)
+	if err != nil {
+		t.Errorf("Error adding stream upstream server: %v", err)
+	}
+
+	// make request so we have stream server zone stats, expect 5xx error
+	streamClient := &http.Client{}
+	_, err = streamClient.Get("http://127.0.0.1:8081")
+	if err != nil {
+		t.Errorf("Error making request: %v", err)
+	}
+
+	stats, err := c.GetStats()
+	if err != nil {
+		t.Errorf("Error getting stats: %v", err)
+	}
+
+	if stats.Connections.Active == 0 {
+		t.Errorf("Bad connections: %v", stats.Connections)
+	}
+	// SSL metrics blank in this example
+	if len(stats.StreamServerZones) < 1 {
+		t.Errorf("No StreamServerZone metrics: %v", stats.StreamServerZones)
+	}
+
+	if streamServerZone, ok := stats.StreamServerZones[streamUpstream]; ok {
+		if streamServerZone.Connections < 1 {
+			t.Errorf("StreamServerZone stats missing: %v", streamServerZone)
+		}
+	} else {
+		t.Errorf("StreamServerZone 'stream_test' not found")
+	}
+
+	if upstream, ok := stats.StreamUpstreams[streamUpstream]; ok {
+		if len(upstream.Peers) < 1 {
+			t.Errorf("stream upstream server not visible in stats")
+		} else {
+			if upstream.Peers[0].State != "up" {
+				t.Errorf("stream upstream server state should be 'up'")
+			}
+			if upstream.Peers[0].Connections < 0 {
+				t.Errorf("stream upstream should have connects value")
+			}
+			if upstream.Peers[0].HealthChecks.LastPassed {
+				t.Errorf("stream upstream server health check should report last failed")
+			}
+		}
+	} else {
+		t.Errorf("Stream upstream 'stream_test' not found")
+	}
+
+	// cleanup stream upstream servers
+	_, _, err = c.UpdateStreamServers(streamUpstream, []client.StreamUpstreamServer{})
+	if err != nil {
+		t.Errorf("Couldn't remove stream servers: %v", err)
+	}
+}
+
 func compareUpstreamServers(x []client.UpstreamServer, y []client.UpstreamServer) bool {
 	var xServers []string
 	for _, us := range x {
