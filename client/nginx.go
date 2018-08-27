@@ -116,7 +116,7 @@ type StreamServerZone struct {
 	Sent        uint64
 }
 
-// Responses represents HTTP reponse related stats.
+// Responses represents HTTP response related stats.
 type Responses struct {
 	Responses1xx uint64 `json:"1xx"`
 	Responses2xx uint64 `json:"2xx"`
