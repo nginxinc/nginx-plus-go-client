@@ -7,7 +7,7 @@ docker-build:
 	docker build --build-arg NGINX_PLUS_VERSION=$(NGINX_PLUS_VERSION)~stretch -t $(NGINX_IMAGE) docker
 
 run-nginx-plus:
-	docker run -d --name nginx-plus-test --rm -p 8080:8080 $(NGINX_IMAGE)
+	docker run -d --name nginx-plus-test --rm -p 8080:8080 -p 8081:8081 $(NGINX_IMAGE)
 
 test-run:
 	go test client/*

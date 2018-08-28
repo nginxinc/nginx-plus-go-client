@@ -516,7 +516,7 @@ func (client *NginxClient) GetStreamServers(upstream string) ([]StreamUpstreamSe
 	return servers, nil
 }
 
-// AddStreamServer adds the server to the upstream.
+// AddStreamServer adds the stream server to the upstream.
 func (client *NginxClient) AddStreamServer(upstream string, server StreamUpstreamServer) error {
 	id, err := client.getIDOfStreamServer(upstream, server.Server)
 
@@ -630,7 +630,7 @@ func determineStreamUpdates(updatedServers []StreamUpstreamServer, nginxServers 
 	return
 }
 
-// GetStats gets connection, request, ssl, zone, and upstream related stats from the NGINX Plus API.
+// GetStats gets connection, request, ssl, zone, stream zone, upstream and stream upstream related stats from the NGINX Plus API.
 func (client *NginxClient) GetStats() (*Stats, error) {
 	cons, err := client.getConnections()
 	if err != nil {
@@ -720,7 +720,7 @@ func (client *NginxClient) getStreamServerZones() (*StreamServerZones, error) {
 	var zones StreamServerZones
 	err := client.get("stream/server_zones", &zones)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get server zones: %v", err)
+		return nil, fmt.Errorf("failed to get stream server zones: %v", err)
 	}
 	return &zones, err
 }
