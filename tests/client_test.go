@@ -398,7 +398,6 @@ func TestStats(t *testing.T) {
 		t.Fatalf("Error connecting to nginx: %v", err)
 	}
 
-	// need upstream for stats
 	server := client.UpstreamServer{
 		Server: "127.0.0.1:8080",
 	}
@@ -461,7 +460,6 @@ func TestStreamStats(t *testing.T) {
 		t.Fatalf("Error connecting to nginx: %v", err)
 	}
 
-	// need upstream for stats
 	server := client.StreamUpstreamServer{
 		Server: "127.0.0.1:8080",
 	}
@@ -484,7 +482,7 @@ func TestStreamStats(t *testing.T) {
 	if stats.Connections.Active == 0 {
 		t.Errorf("Bad connections: %v", stats.Connections)
 	}
-	// SSL metrics blank in this example
+
 	if len(stats.StreamServerZones) < 1 {
 		t.Errorf("No StreamServerZone metrics: %v", stats.StreamServerZones)
 	}
@@ -504,11 +502,11 @@ func TestStreamStats(t *testing.T) {
 			if upstream.Peers[0].State != "up" {
 				t.Errorf("stream upstream server state should be 'up'")
 			}
-			if upstream.Peers[0].Connections < 0 {
+			if upstream.Peers[0].Connections < 1 {
 				t.Errorf("stream upstream should have connects value")
 			}
-			if upstream.Peers[0].HealthChecks.LastPassed {
-				t.Errorf("stream upstream server health check should report last failed")
+			if !upstream.Peers[0].HealthChecks.LastPassed {
+				t.Errorf("stream upstream server health check should report last passed")
 			}
 		}
 	} else {

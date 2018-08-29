@@ -7,11 +7,6 @@ import (
 	"github.com/nginxinc/nginx-plus-go-sdk/client"
 )
 
-const (
-	upstream       = "test"
-	streamUpstream = "stream_test"
-)
-
 // TestStatsNoStream tests the peculiar behavior of getting Stream-related
 // stats from the API when there are no stream blocks in the config.
 // The API returns a special error code that we can use to determine if the API
