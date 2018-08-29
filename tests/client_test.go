@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"net"
 	"net/http"
 	"reflect"
 	"testing"
@@ -179,7 +180,7 @@ func TestStreamUpstreamServerSlowStart(t *testing.T) {
 	}
 	servers, err := c.GetStreamServers(streamUpstream)
 	if err != nil {
-		t.Errorf("Error getting stream servers: %v", err)
+		t.Fatalf("Error getting stream servers: %v", err)
 	}
 	if len(servers) != 1 {
 		t.Errorf("Too many servers")
@@ -371,7 +372,7 @@ func TestUpstreamServerSlowStart(t *testing.T) {
 	}
 	servers, err := c.GetHTTPServers(upstream)
 	if err != nil {
-		t.Errorf("Error getting HTTPServers: %v", err)
+		t.Fatalf("Error getting HTTPServers: %v", err)
 	}
 	if len(servers) != 1 {
 		t.Errorf("Too many servers")
@@ -469,11 +470,10 @@ func TestStreamStats(t *testing.T) {
 		t.Errorf("Error adding stream upstream server: %v", err)
 	}
 
-	// make request so we have stream server zone stats, expect 5xx error
-	streamClient := &http.Client{}
-	_, err = streamClient.Get("http://127.0.0.1:8081")
+	// make connection so we have stream server zone stats - ignore response
+	_, err = net.Dial("tcp", "127.0.0.1:8081")
 	if err != nil {
-		t.Errorf("Error making request: %v", err)
+		t.Errorf("Error making tcp connection: %v", err)
 	}
 
 	stats, err := c.GetStats()

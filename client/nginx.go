@@ -12,6 +12,8 @@ import (
 // APIVersion is a version of NGINX Plus API.
 const APIVersion = 2
 
+const streamNotConfiguredCode = "StreamNotConfigured"
+
 // NginxClient lets you access NGINX Plus API.
 type NginxClient struct {
 	apiEndpoint string
@@ -55,6 +57,15 @@ type apiError struct {
 	Status int
 	Text   string
 	Code   string
+}
+
+type internalError struct {
+	apiError
+	err string
+}
+
+func (internalError *internalError) Error() string {
+	return internalError.err
 }
 
 // Stats represents NGINX Plus stats fetched from the NGINX Plus API.
@@ -273,12 +284,15 @@ func getAPIVersions(httpClient *http.Client, endpoint string) (*versions, error)
 }
 
 func createResponseMismatchError(respBody io.ReadCloser, mainErr error) error {
-	apiErr, err := readAPIErrorResponse(respBody)
+	apiErrResp, err := readAPIErrorResponse(respBody)
 	if err != nil {
 		return fmt.Errorf("%v; failed to read the response body: %v", mainErr, err)
 	}
 
-	return fmt.Errorf("%v; error: %v", mainErr, apiErr.toString())
+	return &internalError{
+		err:      fmt.Sprintf("%v; error: %v", mainErr, apiErrResp.toString()),
+		apiError: apiErrResp.Error,
+	}
 }
 
 func readAPIErrorResponse(respBody io.ReadCloser) (*apiErrorResponse, error) {
@@ -720,6 +734,11 @@ func (client *NginxClient) getStreamServerZones() (*StreamServerZones, error) {
 	var zones StreamServerZones
 	err := client.get("stream/server_zones", &zones)
 	if err != nil {
+		if err, ok := err.(*internalError); ok {
+			if err.Code == streamNotConfiguredCode {
+				return &zones, nil
+			}
+		}
 		return nil, fmt.Errorf("failed to get stream server zones: %v", err)
 	}
 	return &zones, err
@@ -738,6 +757,11 @@ func (client *NginxClient) getStreamUpstreams() (*StreamUpstreams, error) {
 	var upstreams StreamUpstreams
 	err := client.get("stream/upstreams", &upstreams)
 	if err != nil {
+		if err, ok := err.(*internalError); ok {
+			if err.Code == streamNotConfiguredCode {
+				return &upstreams, nil
+			}
+		}
 		return nil, fmt.Errorf("failed to get stream upstreams: %v", err)
 	}
 	return &upstreams, nil
