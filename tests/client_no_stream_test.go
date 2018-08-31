@@ -23,8 +23,8 @@ func TestStatsNoStream(t *testing.T) {
 		t.Errorf("Error getting stats: %v", err)
 	}
 
-	if stats.Connections.Active == 0 {
-		t.Errorf("Bad connections: %v", stats.Connections)
+	if stats.Connections.Accepted < 1 {
+		t.Errorf("Stats should report some connections: %v", stats.Connections)
 	}
 
 	if len(stats.StreamServerZones) != 0 {

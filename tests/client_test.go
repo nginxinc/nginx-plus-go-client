@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/nginxinc/nginx-plus-go-sdk/client"
 )
@@ -473,6 +474,9 @@ func TestStreamStats(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error making tcp connection: %v", err)
 	}
+
+	// wait for health checks
+	time.Sleep(50 * time.Millisecond)
 
 	stats, err := c.GetStats()
 	if err != nil {
