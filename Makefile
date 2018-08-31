@@ -10,7 +10,7 @@ run-nginx-plus:
 	docker run -d --name nginx-plus-test --rm -p 8080:8080 -p 8081:8081 $(NGINX_IMAGE)
 
 test-run:
-	GOCACHE=off go test client/*
+	go test client/*
 	GOCACHE=off go test tests/client_test.go
 
 configure-no-stream-block:
