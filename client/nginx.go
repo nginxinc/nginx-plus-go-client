@@ -295,8 +295,7 @@ func createResponseMismatchError(respBody io.ReadCloser) *internalError {
 	apiErrResp, err := readAPIErrorResponse(respBody)
 	if err != nil {
 		return &internalError{
-			err:      fmt.Sprintf("failed to read the response body: %v", err),
-			apiError: apiError{},
+			err: fmt.Sprintf("failed to read the response body: %v", err),
 		}
 	}
 
@@ -464,7 +463,7 @@ func (client *NginxClient) get(path string, data interface{}) error {
 	if resp.StatusCode != http.StatusOK {
 		return createResponseMismatchError(resp.Body).Wrap(fmt.Sprintf(
 			"expected %v response, got %v",
-			http.StatusCreated, resp.StatusCode))
+			http.StatusOK, resp.StatusCode))
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
@@ -518,7 +517,7 @@ func (client *NginxClient) delete(path string) error {
 	if resp.StatusCode != http.StatusOK {
 		return createResponseMismatchError(resp.Body).Wrap(fmt.Sprintf(
 			"failed to complete delete request: expected %v response, got %v",
-			http.StatusCreated, resp.StatusCode))
+			http.StatusOK, resp.StatusCode))
 	}
 	return nil
 }
@@ -679,12 +678,12 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 		return nil, fmt.Errorf("failed to get stats: %v", err)
 	}
 
-	streamZones, err := client.getStreamServerZones()
+	upstreams, err := client.getUpstreams()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get stats: %v", err)
 	}
 
-	upstreams, err := client.getUpstreams()
+	streamZones, err := client.getStreamServerZones()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get stats: %v", err)
 	}
