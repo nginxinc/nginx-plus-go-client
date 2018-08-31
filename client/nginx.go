@@ -64,8 +64,16 @@ type internalError struct {
 	err string
 }
 
+// Error allows internalError to match the Error interface.
 func (internalError *internalError) Error() string {
 	return internalError.err
+}
+
+// Wrap is a way of including current context while preserving previous error information,
+// similar to `return fmt.Errof("error doing foo, err: %v", err)` but for our internalError type.
+func (internalError *internalError) Wrap(err string) *internalError {
+	internalError.err = fmt.Sprintf("%v. %v", err, internalError.err)
+	return internalError
 }
 
 // Stats represents NGINX Plus stats fetched from the NGINX Plus API.
@@ -283,14 +291,17 @@ func getAPIVersions(httpClient *http.Client, endpoint string) (*versions, error)
 	return &vers, nil
 }
 
-func createResponseMismatchError(respBody io.ReadCloser, mainErr error) error {
+func createResponseMismatchError(respBody io.ReadCloser) *internalError {
 	apiErrResp, err := readAPIErrorResponse(respBody)
 	if err != nil {
-		return fmt.Errorf("%v; failed to read the response body: %v", mainErr, err)
+		return &internalError{
+			err:      fmt.Sprintf("failed to read the response body: %v", err),
+			apiError: apiError{},
+		}
 	}
 
 	return &internalError{
-		err:      fmt.Sprintf("%v; error: %v", mainErr, apiErrResp.toString()),
+		err:      apiErrResp.toString(),
 		apiError: apiErrResp.Error,
 	}
 }
@@ -451,8 +462,9 @@ func (client *NginxClient) get(path string, data interface{}) error {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		mainErr := fmt.Errorf("expected %v response, got %v", http.StatusOK, resp.StatusCode)
-		return createResponseMismatchError(resp.Body, mainErr)
+		return createResponseMismatchError(resp.Body).Wrap(fmt.Sprintf(
+			"expected %v response, got %v",
+			http.StatusCreated, resp.StatusCode))
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
@@ -481,8 +493,9 @@ func (client *NginxClient) post(path string, input interface{}) error {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
-		mainErr := fmt.Errorf("expected %v response, got %v", http.StatusCreated, resp.StatusCode)
-		return createResponseMismatchError(resp.Body, mainErr)
+		return createResponseMismatchError(resp.Body).Wrap(fmt.Sprintf(
+			"expected %v response, got %v",
+			http.StatusCreated, resp.StatusCode))
 	}
 
 	return nil
@@ -503,9 +516,9 @@ func (client *NginxClient) delete(path string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		mainErr := fmt.Errorf("failed to complete delete request: expected %v response, got %v",
-			http.StatusOK, resp.StatusCode)
-		return createResponseMismatchError(resp.Body, mainErr)
+		return createResponseMismatchError(resp.Body).Wrap(fmt.Sprintf(
+			"failed to complete delete request: expected %v response, got %v",
+			http.StatusCreated, resp.StatusCode))
 	}
 	return nil
 }
