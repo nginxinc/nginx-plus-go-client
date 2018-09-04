@@ -12,6 +12,8 @@ import (
 // APIVersion is a version of NGINX Plus API.
 const APIVersion = 2
 
+const streamNotConfiguredCode = "StreamNotConfigured"
+
 // NginxClient lets you access NGINX Plus API.
 type NginxClient struct {
 	apiEndpoint string
@@ -57,14 +59,33 @@ type apiError struct {
 	Code   string
 }
 
+type internalError struct {
+	apiError
+	err string
+}
+
+// Error allows internalError to match the Error interface.
+func (internalError *internalError) Error() string {
+	return internalError.err
+}
+
+// Wrap is a way of including current context while preserving previous error information,
+// similar to `return fmt.Errof("error doing foo, err: %v", err)` but for our internalError type.
+func (internalError *internalError) Wrap(err string) *internalError {
+	internalError.err = fmt.Sprintf("%v. %v", err, internalError.err)
+	return internalError
+}
+
 // Stats represents NGINX Plus stats fetched from the NGINX Plus API.
 // https://nginx.org/en/docs/http/ngx_http_api_module.html
 type Stats struct {
-	Connections  Connections
-	HTTPRequests HTTPRequests
-	SSL          SSL
-	ServerZones  ServerZones
-	Upstreams    Upstreams
+	Connections       Connections
+	HTTPRequests      HTTPRequests
+	SSL               SSL
+	ServerZones       ServerZones
+	Upstreams         Upstreams
+	StreamServerZones StreamServerZones
+	StreamUpstreams   StreamUpstreams
 }
 
 // Connections represents connection related stats.
@@ -101,7 +122,20 @@ type ServerZone struct {
 	Sent       uint64
 }
 
-// Responses represents HTTP reponse related stats.
+// StreamServerZones is map of stream server zone stats by zone name.
+type StreamServerZones map[string]StreamServerZone
+
+// StreamServerZone represents stream server zone related stats.
+type StreamServerZone struct {
+	Processing  uint64
+	Connections uint64
+	Sessions    Sessions
+	Discarded   uint64
+	Received    uint64
+	Sent        uint64
+}
+
+// Responses represents HTTP response related stats.
 type Responses struct {
 	Responses1xx uint64 `json:"1xx"`
 	Responses2xx uint64 `json:"2xx"`
@@ -109,6 +143,14 @@ type Responses struct {
 	Responses4xx uint64 `json:"4xx"`
 	Responses5xx uint64 `json:"5xx"`
 	Total        uint64
+}
+
+// Sessions represents stream session related stats.
+type Sessions struct {
+	Sessions2xx uint64 `json:"2xx"`
+	Sessions4xx uint64 `josn:"4xx"`
+	Sessions5xx uint64 `josn:"5xx"`
+	Total       uint64
 }
 
 // Upstreams is a map of upstream stats by upstream name.
@@ -121,6 +163,16 @@ type Upstream struct {
 	Zombies    int
 	Zone       string
 	Queue      Queue
+}
+
+// StreamUpstreams is a map of stream upstream stats by upstream name.
+type StreamUpstreams map[string]StreamUpstream
+
+// StreamUpstream represents stream upstream related stats.
+type StreamUpstream struct {
+	Peers   []StreamPeer
+	Zombies int
+	Zone    string
 }
 
 // Queue represents queue related stats for an upstream.
@@ -153,6 +205,31 @@ type Peer struct {
 	Selected     string
 	HeaderTime   uint64 `json:"header_time"`
 	ResponseTime uint64 `json:"response_time"`
+}
+
+// StreamPeer represents peer (stream upstream server) related stats.
+type StreamPeer struct {
+	ID            int
+	Server        string
+	Service       string
+	Name          string
+	Backup        bool
+	Weight        int
+	State         string
+	Active        uint64
+	MaxConns      int `json:"max_conns"`
+	Connections   uint64
+	ConnectTime   int    `json:"connect_time"`
+	FirstByteTime int    `json:"first_byte_time"`
+	ResponseTime  uint64 `json:"response_time"`
+	Sent          uint64
+	Received      uint64
+	Fails         uint64
+	Unavail       uint64
+	HealthChecks  HealthChecks `json:"health_checks"`
+	Downtime      uint64
+	Downstart     string
+	Selected      string
 }
 
 // HealthChecks represents health check related stats for a peer.
@@ -214,13 +291,18 @@ func getAPIVersions(httpClient *http.Client, endpoint string) (*versions, error)
 	return &vers, nil
 }
 
-func createResponseMismatchError(respBody io.ReadCloser, mainErr error) error {
-	apiErr, err := readAPIErrorResponse(respBody)
+func createResponseMismatchError(respBody io.ReadCloser) *internalError {
+	apiErrResp, err := readAPIErrorResponse(respBody)
 	if err != nil {
-		return fmt.Errorf("%v; failed to read the response body: %v", mainErr, err)
+		return &internalError{
+			err: fmt.Sprintf("failed to read the response body: %v", err),
+		}
 	}
 
-	return fmt.Errorf("%v; error: %v", mainErr, apiErr.toString())
+	return &internalError{
+		err:      apiErrResp.toString(),
+		apiError: apiErrResp.Error,
+	}
 }
 
 func readAPIErrorResponse(respBody io.ReadCloser) (*apiErrorResponse, error) {
@@ -379,8 +461,9 @@ func (client *NginxClient) get(path string, data interface{}) error {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		mainErr := fmt.Errorf("expected %v response, got %v", http.StatusOK, resp.StatusCode)
-		return createResponseMismatchError(resp.Body, mainErr)
+		return createResponseMismatchError(resp.Body).Wrap(fmt.Sprintf(
+			"expected %v response, got %v",
+			http.StatusOK, resp.StatusCode))
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
@@ -409,8 +492,9 @@ func (client *NginxClient) post(path string, input interface{}) error {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
-		mainErr := fmt.Errorf("expected %v response, got %v", http.StatusCreated, resp.StatusCode)
-		return createResponseMismatchError(resp.Body, mainErr)
+		return createResponseMismatchError(resp.Body).Wrap(fmt.Sprintf(
+			"expected %v response, got %v",
+			http.StatusCreated, resp.StatusCode))
 	}
 
 	return nil
@@ -431,9 +515,9 @@ func (client *NginxClient) delete(path string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		mainErr := fmt.Errorf("failed to complete delete request: expected %v response, got %v",
-			http.StatusOK, resp.StatusCode)
-		return createResponseMismatchError(resp.Body, mainErr)
+		return createResponseMismatchError(resp.Body).Wrap(fmt.Sprintf(
+			"failed to complete delete request: expected %v response, got %v",
+			http.StatusOK, resp.StatusCode))
 	}
 	return nil
 }
@@ -458,7 +542,7 @@ func (client *NginxClient) GetStreamServers(upstream string) ([]StreamUpstreamSe
 	return servers, nil
 }
 
-// AddStreamServer adds the server to the upstream.
+// AddStreamServer adds the stream server to the upstream.
 func (client *NginxClient) AddStreamServer(upstream string, server StreamUpstreamServer) error {
 	id, err := client.getIDOfStreamServer(upstream, server.Server)
 
@@ -572,7 +656,7 @@ func determineStreamUpdates(updatedServers []StreamUpstreamServer, nginxServers 
 	return
 }
 
-// GetStats gets connection, request, ssl, zone, and upstream related stats from the NGINX Plus API.
+// GetStats gets connection, request, ssl, zone, stream zone, upstream and stream upstream related stats from the NGINX Plus API.
 func (client *NginxClient) GetStats() (*Stats, error) {
 	cons, err := client.getConnections()
 	if err != nil {
@@ -599,12 +683,24 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 		return nil, fmt.Errorf("failed to get stats: %v", err)
 	}
 
+	streamZones, err := client.getStreamServerZones()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get stats: %v", err)
+	}
+
+	streamUpstreams, err := client.getStreamUpstreams()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get stats: %v", err)
+	}
+
 	return &Stats{
-		Connections:  *cons,
-		HTTPRequests: *requests,
-		SSL:          *ssl,
-		ServerZones:  *zones,
-		Upstreams:    *upstreams,
+		Connections:       *cons,
+		HTTPRequests:      *requests,
+		SSL:               *ssl,
+		ServerZones:       *zones,
+		StreamServerZones: *streamZones,
+		Upstreams:         *upstreams,
+		StreamUpstreams:   *streamUpstreams,
 	}, nil
 }
 
@@ -646,11 +742,39 @@ func (client *NginxClient) getServerZones() (*ServerZones, error) {
 	return &zones, err
 }
 
+func (client *NginxClient) getStreamServerZones() (*StreamServerZones, error) {
+	var zones StreamServerZones
+	err := client.get("stream/server_zones", &zones)
+	if err != nil {
+		if err, ok := err.(*internalError); ok {
+			if err.Code == streamNotConfiguredCode {
+				return &zones, nil
+			}
+		}
+		return nil, fmt.Errorf("failed to get stream server zones: %v", err)
+	}
+	return &zones, err
+}
+
 func (client *NginxClient) getUpstreams() (*Upstreams, error) {
 	var upstreams Upstreams
 	err := client.get("http/upstreams", &upstreams)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get upstreams: %v", err)
+	}
+	return &upstreams, nil
+}
+
+func (client *NginxClient) getStreamUpstreams() (*StreamUpstreams, error) {
+	var upstreams StreamUpstreams
+	err := client.get("stream/upstreams", &upstreams)
+	if err != nil {
+		if err, ok := err.(*internalError); ok {
+			if err.Code == streamNotConfiguredCode {
+				return &upstreams, nil
+			}
+		}
+		return nil, fmt.Errorf("failed to get stream upstreams: %v", err)
 	}
 	return &upstreams, nil
 }
