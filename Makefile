@@ -1,4 +1,4 @@
-NGINX_PLUS_VERSION=15-2
+NGINX_PLUS_VERSION=16-1
 NGINX_IMAGE=nginxplus:$(NGINX_PLUS_VERSION)
 
 test: docker-build run-nginx-plus test-run configure-no-stream-block test-run-no-stream-block clean
