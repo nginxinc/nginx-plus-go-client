@@ -62,13 +62,13 @@ func TestStreamClient(t *testing.T) {
 
 	// test updating stream servers
 	streamServers1 := []client.StreamUpstreamServer{
-		client.StreamUpstreamServer{
+		{
 			Server: "127.0.0.2:8001",
 		},
-		client.StreamUpstreamServer{
+		{
 			Server: "127.0.0.2:8002",
 		},
-		client.StreamUpstreamServer{
+		{
 			Server: "127.0.0.2:8003",
 		},
 	}
@@ -110,12 +110,12 @@ func TestStreamClient(t *testing.T) {
 	}
 
 	streamServers2 := []client.StreamUpstreamServer{
-		client.StreamUpstreamServer{
+		{
 			Server: "127.0.0.2:8003",
 		},
-		client.StreamUpstreamServer{
+		{
 			Server: "127.0.0.2:8004",
-		}, client.StreamUpstreamServer{
+		}, {
 			Server: "127.0.0.2:8005",
 		},
 	}
@@ -252,13 +252,13 @@ func TestClient(t *testing.T) {
 
 	// test updating servers
 	servers1 := []client.UpstreamServer{
-		client.UpstreamServer{
+		{
 			Server: "127.0.0.2:8001",
 		},
-		client.UpstreamServer{
+		{
 			Server: "127.0.0.2:8002",
 		},
-		client.UpstreamServer{
+		{
 			Server: "127.0.0.2:8003",
 		},
 	}
@@ -302,12 +302,12 @@ func TestClient(t *testing.T) {
 	}
 
 	servers2 := []client.UpstreamServer{
-		client.UpstreamServer{
+		{
 			Server: "127.0.0.2:8003",
 		},
-		client.UpstreamServer{
+		{
 			Server: "127.0.0.2:8004",
-		}, client.UpstreamServer{
+		}, {
 			Server: "127.0.0.2:8005",
 		},
 	}
