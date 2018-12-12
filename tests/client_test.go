@@ -412,6 +412,32 @@ func TestStats(t *testing.T) {
 		t.Errorf("Error getting stats: %v", err)
 	}
 
+	// NginxInfo
+	if stats.NginxInfo.Version == "" {
+		t.Error("Missing version string")
+	}
+	if stats.NginxInfo.Build == "" {
+		t.Error("Missing build string")
+	}
+	if stats.NginxInfo.Address == "" {
+		t.Errorf("Missing server address")
+	}
+	if stats.NginxInfo.Generation < 1 {
+		t.Errorf("Bad config generation: %v", stats.NginxInfo.Generation)
+	}
+	if stats.NginxInfo.LoadTimestamp == "" {
+		t.Error("Missing load timestamp")
+	}
+	if stats.NginxInfo.Timestamp == "" {
+		t.Error("Missing timestamp")
+	}
+	if stats.NginxInfo.ProcessID < 1 {
+		t.Errorf("Bad process id: %v", stats.NginxInfo.ProcessID)
+	}
+	if stats.NginxInfo.ParentProcessID < 1 {
+		t.Errorf("Bad parent process id: %v", stats.NginxInfo.ParentProcessID)
+	}
+
 	if stats.Connections.Accepted < 1 {
 		t.Errorf("Bad connections: %v", stats.Connections)
 	}

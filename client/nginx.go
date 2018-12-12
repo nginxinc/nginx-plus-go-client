@@ -79,6 +79,7 @@ func (internalError *internalError) Wrap(err string) *internalError {
 // Stats represents NGINX Plus stats fetched from the NGINX Plus API.
 // https://nginx.org/en/docs/http/ngx_http_api_module.html
 type Stats struct {
+	NginxInfo         NginxInfo
 	Connections       Connections
 	HTTPRequests      HTTPRequests
 	SSL               SSL
@@ -86,6 +87,18 @@ type Stats struct {
 	Upstreams         Upstreams
 	StreamServerZones StreamServerZones
 	StreamUpstreams   StreamUpstreams
+}
+
+// NginxInfo contains general information about NGINX Plus.
+type NginxInfo struct {
+	Version         string
+	Build           string
+	Address         string
+	Generation      uint64
+	LoadTimestamp   string `json:"load_timestamp"`
+	Timestamp       string
+	ProcessID       uint64 `json:"pid"`
+	ParentProcessID uint64 `json:"ppid"`
 }
 
 // Connections represents connection related stats.
@@ -658,6 +671,11 @@ func determineStreamUpdates(updatedServers []StreamUpstreamServer, nginxServers 
 
 // GetStats gets connection, request, ssl, zone, stream zone, upstream and stream upstream related stats from the NGINX Plus API.
 func (client *NginxClient) GetStats() (*Stats, error) {
+	info, err := client.getNginxInfo()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get stats %v", err)
+	}
+
 	cons, err := client.getConnections()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get stats: %v", err)
@@ -694,6 +712,7 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 	}
 
 	return &Stats{
+		NginxInfo:         *info,
 		Connections:       *cons,
 		HTTPRequests:      *requests,
 		SSL:               *ssl,
@@ -702,6 +721,15 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 		Upstreams:         *upstreams,
 		StreamUpstreams:   *streamUpstreams,
 	}, nil
+}
+
+func (client *NginxClient) getNginxInfo() (*NginxInfo, error) {
+	var info NginxInfo
+	err := client.get("nginx", &info)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get info: %v", err)
+	}
+	return &info, nil
 }
 
 func (client *NginxClient) getConnections() (*Connections, error) {
