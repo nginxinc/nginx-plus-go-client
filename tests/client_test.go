@@ -549,6 +549,200 @@ func TestStreamStats(t *testing.T) {
 		t.Errorf("Couldn't remove stream servers: %v", err)
 	}
 }
+func TestKeyValue(t *testing.T) {
+	zoneName := "zone_one"
+	httpClient := &http.Client{}
+	c, err := client.NewNginxClient(httpClient, "http://127.0.0.1:8080/api")
+	if err != nil {
+		t.Fatalf("Error connecting to nginx: %v", err)
+	}
+
+	err = c.AddKeyValPair(zoneName, "key1", "val1")
+	if err != nil {
+		t.Errorf("Couldn't set keyvals: %v", err)
+	}
+
+	var keyValPairs client.KeyValPairs
+	keyValPairs, err = c.GetKeyValPairs(zoneName)
+	if err != nil {
+		t.Errorf("Couldn't get keyvals for zone: %v, err: %v", zoneName, err)
+	}
+	expectedKeyValPairs := client.KeyValPairs{
+		"key1": "val1",
+	}
+	if !reflect.DeepEqual(expectedKeyValPairs, keyValPairs) {
+		t.Errorf("maps are not equal. expected: %+v, got: %+v", expectedKeyValPairs, keyValPairs)
+	}
+
+	keyValuPairsByZone, err := c.GetAllKeyValPairs()
+	if err != nil {
+		t.Errorf("Couldn't get keyvals, %v", err)
+	}
+	expectedKeyValPairsByZone := client.KeyValPairsByZone{
+		zoneName: expectedKeyValPairs,
+	}
+	if !reflect.DeepEqual(expectedKeyValPairsByZone, keyValuPairsByZone) {
+		t.Errorf("maps are not equal. expected: %+v, got: %+v", expectedKeyValPairsByZone, keyValuPairsByZone)
+	}
+
+	// modify keyval
+	expectedKeyValPairs["key1"] = "valModified1"
+	err = c.ModifyKeyValPair(zoneName, "key1", "valModified1")
+	if err != nil {
+		t.Errorf("couldn't set keyval: %v", err)
+	}
+
+	keyValPairs, err = c.GetKeyValPairs(zoneName)
+	if err != nil {
+		t.Errorf("couldn't get keyval: %v", err)
+	}
+	if !reflect.DeepEqual(expectedKeyValPairs, keyValPairs) {
+		t.Errorf("maps are not equal. expected: %+v, got: %+v", expectedKeyValPairs, keyValPairs)
+	}
+
+	// error expected
+	err = c.AddKeyValPair(zoneName, "key1", "valModified1")
+	if err == nil {
+		t.Errorf("adding same key/val should result in error")
+	}
+
+	err = c.AddKeyValPair(zoneName, "key2", "val2")
+	if err != nil {
+		t.Errorf("error adding another key/val pair: %v", err)
+	}
+
+	err = c.DeleteKeyValuePair(zoneName, "key1")
+	if err != nil {
+		t.Errorf("error deleting key")
+	}
+
+	expectedKeyValPairs2 := client.KeyValPairs{
+		"key2": "val2",
+	}
+	keyValPairs, err = c.GetKeyValPairs(zoneName)
+	if err != nil {
+		t.Errorf("couldn't get keyval: %v", err)
+	}
+	if !reflect.DeepEqual(keyValPairs, expectedKeyValPairs2) {
+		t.Errorf("didn't delete key1 %+v", keyValPairs)
+	}
+
+	err = c.DeleteKeyValPairs(zoneName)
+	if err != nil {
+		t.Errorf("couldn't delete all: %v", err)
+	}
+
+	keyValPairs, err = c.GetKeyValPairs(zoneName)
+	if err != nil {
+		t.Errorf("couldn't get keyval: %v", err)
+	}
+	if len(keyValPairs) > 0 {
+		t.Errorf("zone should be empty after bulk delete")
+	}
+
+	// error expected
+	err = c.ModifyKeyValPair(zoneName, "key1", "val1")
+	if err == nil {
+		t.Errorf("modifying nonexistent key/val should result in error")
+	}
+}
+
+func TestKeyValueStream(t *testing.T) {
+	zoneName := "zone_one_stream"
+	httpClient := &http.Client{}
+	c, err := client.NewNginxClient(httpClient, "http://127.0.0.1:8080/api")
+	if err != nil {
+		t.Fatalf("Error connecting to nginx: %v", err)
+	}
+
+	err = c.AddStreamKeyValPair(zoneName, "key1", "val1")
+	if err != nil {
+		t.Errorf("Couldn't set keyvals: %v", err)
+	}
+
+	keyValPairs, err := c.GetStreamKeyValPairs(zoneName)
+	if err != nil {
+		t.Errorf("Couldn't get keyvals for zone: %v, err: %v", zoneName, err)
+	}
+	expectedKeyValPairs := client.KeyValPairs{
+		"key1": "val1",
+	}
+	if !reflect.DeepEqual(expectedKeyValPairs, keyValPairs) {
+		t.Errorf("maps are not equal. expected: %+v, got: %+v", expectedKeyValPairs, keyValPairs)
+	}
+
+	keyValPairsByZone, err := c.GetAllStreamKeyValPairs()
+	if err != nil {
+		t.Errorf("Couldn't get keyvals, %v", err)
+	}
+	expectedKeyValuePairsByZone := client.KeyValPairsByZone{
+		zoneName: expectedKeyValPairs,
+	}
+	if !reflect.DeepEqual(expectedKeyValuePairsByZone, keyValPairsByZone) {
+		t.Errorf("maps are not equal. expected: %+v, got: %+v", expectedKeyValuePairsByZone, keyValPairsByZone)
+	}
+
+	// modify keyval
+	expectedKeyValPairs["key1"] = "valModified1"
+	err = c.ModifyStreamKeyValPair(zoneName, "key1", "valModified1")
+	if err != nil {
+		t.Errorf("couldn't set keyval: %v", err)
+	}
+
+	keyValPairs, err = c.GetStreamKeyValPairs(zoneName)
+	if err != nil {
+		t.Errorf("couldn't get keyval: %v", err)
+	}
+	if !reflect.DeepEqual(expectedKeyValPairs, keyValPairs) {
+		t.Errorf("maps are not equal. expected: %+v, got: %+v", expectedKeyValPairs, keyValPairs)
+	}
+
+	// error expected
+	err = c.AddStreamKeyValPair(zoneName, "key1", "valModified1")
+	if err == nil {
+		t.Errorf("adding same key/val should result in error")
+	}
+
+	err = c.AddStreamKeyValPair(zoneName, "key2", "val2")
+	if err != nil {
+		t.Errorf("error adding another key/val pair: %v", err)
+	}
+
+	err = c.DeleteStreamKeyValuePair(zoneName, "key1")
+	if err != nil {
+		t.Errorf("error deleting key")
+	}
+
+	keyValPairs, err = c.GetStreamKeyValPairs(zoneName)
+	if err != nil {
+		t.Errorf("couldn't get keyval: %v", err)
+	}
+	expectedKeyValPairs2 := client.KeyValPairs{
+		"key2": "val2",
+	}
+	if !reflect.DeepEqual(keyValPairs, expectedKeyValPairs2) {
+		t.Errorf("didn't delete key1 %+v", keyValPairs)
+	}
+
+	err = c.DeleteStreamKeyValPairs(zoneName)
+	if err != nil {
+		t.Errorf("couldn't delete all: %v", err)
+	}
+
+	keyValPairs, err = c.GetStreamKeyValPairs(zoneName)
+	if err != nil {
+		t.Errorf("couldn't get keyval: %v", err)
+	}
+	if len(keyValPairs) > 0 {
+		t.Errorf("zone should be empty after bulk delete")
+	}
+
+	// error expected
+	err = c.ModifyStreamKeyValPair(zoneName, "key1", "valModified")
+	if err == nil {
+		t.Errorf("modifying nonexistent key/val should result in error")
+	}
+}
 
 func compareUpstreamServers(x []client.UpstreamServer, y []client.UpstreamServer) bool {
 	var xServers []string
