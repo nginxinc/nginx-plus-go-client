@@ -14,11 +14,8 @@ const APIVersion = 2
 
 const streamNotConfiguredCode = "StreamNotConfigured"
 
-// Stream is a stream context parameter.
-const Stream = true
-
-// HTTP is a HTTP context parameter.
-const HTTP = false
+const streamContext = true
+const httpContext = false
 
 // NginxClient lets you access NGINX Plus API.
 type NginxClient struct {
@@ -76,7 +73,7 @@ func (internalError *internalError) Error() string {
 }
 
 // Wrap is a way of including current context while preserving previous error information,
-// similar to `return fmt.Errof("error doing foo, err: %v", err)` but for our internalError type.
+// similar to `return fmt.Errorf("error doing foo, err: %v", err)` but for our internalError type.
 func (internalError *internalError) Wrap(err string) *internalError {
 	internalError.err = fmt.Sprintf("%v. %v", err, internalError.err)
 	return internalError
@@ -262,7 +259,6 @@ type HealthChecks struct {
 // NewNginxClient creates an NginxClient.
 func NewNginxClient(httpClient *http.Client, apiEndpoint string) (*NginxClient, error) {
 	versions, err := getAPIVersions(httpClient, apiEndpoint)
-
 	if err != nil {
 		return nil, fmt.Errorf("error accessing the API: %v", err)
 	}
@@ -351,7 +347,6 @@ func (client *NginxClient) GetHTTPServers(upstream string) ([]UpstreamServer, er
 
 	var servers []UpstreamServer
 	err := client.get(path, &servers)
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the HTTP servers of upstream %v: %v", upstream, err)
 	}
@@ -362,7 +357,6 @@ func (client *NginxClient) GetHTTPServers(upstream string) ([]UpstreamServer, er
 // AddHTTPServer adds the server to the upstream.
 func (client *NginxClient) AddHTTPServer(upstream string, server UpstreamServer) error {
 	id, err := client.getIDOfHTTPServer(upstream, server.Server)
-
 	if err != nil {
 		return fmt.Errorf("failed to add %v server to %v upstream: %v", server.Server, upstream, err)
 	}
@@ -390,8 +384,7 @@ func (client *NginxClient) DeleteHTTPServer(upstream string, server string) erro
 	}
 
 	path := fmt.Sprintf("http/upstreams/%v/servers/%v", upstream, id)
-	err = client.delete(path)
-
+	err = client.delete(path, http.StatusOK)
 	if err != nil {
 		return fmt.Errorf("failed to remove %v server from %v upstream: %v", server, upstream, err)
 	}
@@ -519,7 +512,7 @@ func (client *NginxClient) post(path string, input interface{}) error {
 	return nil
 }
 
-func (client *NginxClient) delete(path string) error {
+func (client *NginxClient) delete(path string, expectedStatusCode int) error {
 	path = fmt.Sprintf("%v/%v/%v/", client.apiEndpoint, APIVersion, path)
 
 	req, err := http.NewRequest(http.MethodDelete, path, nil)
@@ -533,10 +526,37 @@ func (client *NginxClient) delete(path string) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != expectedStatusCode {
 		return createResponseMismatchError(resp.Body).Wrap(fmt.Sprintf(
 			"failed to complete delete request: expected %v response, got %v",
-			http.StatusOK, resp.StatusCode))
+			expectedStatusCode, resp.StatusCode))
+	}
+	return nil
+}
+
+func (client *NginxClient) patch(path string, input interface{}) error {
+	path = fmt.Sprintf("%v/%v/%v/", client.apiEndpoint, APIVersion, path)
+
+	jsonInput, err := json.Marshal(input)
+	if err != nil {
+		return fmt.Errorf("failed to marshall input: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPatch, path, bytes.NewBuffer(jsonInput))
+	if err != nil {
+		return fmt.Errorf("failed to create a patch request: %v", err)
+	}
+
+	resp, err := client.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to create patch request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		return createResponseMismatchError(resp.Body).Wrap(fmt.Sprintf(
+			"failed to complete patch request: expected %v response, got %v",
+			http.StatusNoContent, resp.StatusCode))
 	}
 	return nil
 }
@@ -553,18 +573,15 @@ func (client *NginxClient) GetStreamServers(upstream string) ([]StreamUpstreamSe
 
 	var servers []StreamUpstreamServer
 	err := client.get(path, &servers)
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to get stream servers of upstream server %v: %v", upstream, err)
 	}
-
 	return servers, nil
 }
 
 // AddStreamServer adds the stream server to the upstream.
 func (client *NginxClient) AddStreamServer(upstream string, server StreamUpstreamServer) error {
 	id, err := client.getIDOfStreamServer(upstream, server.Server)
-
 	if err != nil {
 		return fmt.Errorf("failed to add %v stream server to %v upstream: %v", server.Server, upstream, err)
 	}
@@ -574,11 +591,9 @@ func (client *NginxClient) AddStreamServer(upstream string, server StreamUpstrea
 
 	path := fmt.Sprintf("stream/upstreams/%v/servers/", upstream)
 	err = client.post(path, &server)
-
 	if err != nil {
 		return fmt.Errorf("failed to add %v stream server to %v upstream: %v", server.Server, upstream, err)
 	}
-
 	return nil
 }
 
@@ -593,12 +608,10 @@ func (client *NginxClient) DeleteStreamServer(upstream string, server string) er
 	}
 
 	path := fmt.Sprintf("stream/upstreams/%v/servers/%v", upstream, id)
-	err = client.delete(path)
-
+	err = client.delete(path, http.StatusOK)
 	if err != nil {
 		return fmt.Errorf("failed to remove %v stream server from %v upstream: %v", server, upstream, err)
 	}
-
 	return nil
 }
 
@@ -749,12 +762,10 @@ func (client *NginxClient) getConnections() (*Connections, error) {
 
 func (client *NginxClient) getHTTPRequests() (*HTTPRequests, error) {
 	var requests HTTPRequests
-
 	err := client.get("http/requests", &requests)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get http requests: %v", err)
 	}
-
 	return &requests, nil
 }
 
@@ -821,12 +832,12 @@ type KeyValPairsByZone map[string]KeyValPairs
 
 // GetKeyValPairs fetches key/value pairs for a given HTTP zone.
 func (client *NginxClient) GetKeyValPairs(zone string) (KeyValPairs, error) {
-	return client.getKeyValPairs(zone, HTTP)
+	return client.getKeyValPairs(zone, httpContext)
 }
 
 // GetStreamKeyValPairs fetches key/value pairs for a given Stream zone.
 func (client *NginxClient) GetStreamKeyValPairs(zone string) (KeyValPairs, error) {
-	return client.getKeyValPairs(zone, Stream)
+	return client.getKeyValPairs(zone, streamContext)
 }
 
 func (client *NginxClient) getKeyValPairs(zone string, stream bool) (KeyValPairs, error) {
@@ -837,22 +848,24 @@ func (client *NginxClient) getKeyValPairs(zone string, stream bool) (KeyValPairs
 	if zone == "" {
 		return nil, fmt.Errorf("zone required")
 	}
+
+	path := fmt.Sprintf("%v/keyvals/%v", base, zone)
 	var keyValPairs KeyValPairs
-	err := client.get(fmt.Sprintf("%v/keyvals/%v", base, zone), &keyValPairs)
+	err := client.get(path, &keyValPairs)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get keyvals for zone: %v/%v: %v", base, zone, err)
+		return nil, fmt.Errorf("failed to get keyvals for %v/%v zone: %v", base, zone, err)
 	}
 	return keyValPairs, nil
 }
 
 // GetAllKeyValPairs fetches all key/value pairs for all HTTP zones.
 func (client *NginxClient) GetAllKeyValPairs() (KeyValPairsByZone, error) {
-	return client.getAllKeyValPairs(HTTP)
+	return client.getAllKeyValPairs(httpContext)
 }
 
 // GetAllStreamKeyValPairs fetches all key/value pairs for all Stream zones.
 func (client *NginxClient) GetAllStreamKeyValPairs() (KeyValPairsByZone, error) {
-	return client.getAllKeyValPairs(Stream)
+	return client.getAllKeyValPairs(streamContext)
 }
 
 func (client *NginxClient) getAllKeyValPairs(stream bool) (KeyValPairsByZone, error) {
@@ -860,8 +873,10 @@ func (client *NginxClient) getAllKeyValPairs(stream bool) (KeyValPairsByZone, er
 	if stream {
 		base = "stream"
 	}
+
+	path := fmt.Sprintf("%v/keyvals", base)
 	var keyValPairsByZone KeyValPairsByZone
-	err := client.get(fmt.Sprintf("%v/keyvals", base), &keyValPairsByZone)
+	err := client.get(path, &keyValPairsByZone)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get keyvals for all %v zones: %v", base, err)
 	}
@@ -870,12 +885,12 @@ func (client *NginxClient) getAllKeyValPairs(stream bool) (KeyValPairsByZone, er
 
 // AddKeyValPair adds a new key/value pair to a given HTTP zone.
 func (client *NginxClient) AddKeyValPair(zone string, key string, val string) error {
-	return client.addKeyValPair(zone, key, val, HTTP)
+	return client.addKeyValPair(zone, key, val, httpContext)
 }
 
 // AddStreamKeyValPair adds a new key/value pair to a given Stream zone.
 func (client *NginxClient) AddStreamKeyValPair(zone string, key string, val string) error {
-	return client.addKeyValPair(zone, key, val, Stream)
+	return client.addKeyValPair(zone, key, val, streamContext)
 }
 
 func (client *NginxClient) addKeyValPair(zone string, key string, val string, stream bool) error {
@@ -883,41 +898,27 @@ func (client *NginxClient) addKeyValPair(zone string, key string, val string, st
 	if stream {
 		base = "stream"
 	}
-	path := fmt.Sprintf("%v/keyvals", base)
-	url := fmt.Sprintf("%v/%v/%v", client.apiEndpoint, APIVersion, path)
-	if zone != "" {
-		url = fmt.Sprintf("%v/%v", url, zone)
-	} else {
+	if zone == "" {
 		return fmt.Errorf("zone required")
 	}
 
-	jsonInput, err := json.Marshal(KeyValPairs{key: val})
+	path := fmt.Sprintf("%v/keyvals/%v", base, zone)
+	input := KeyValPairs{key: val}
+	err := client.post(path, &input)
 	if err != nil {
-		return fmt.Errorf("failed to marshall input: %v", err)
-	}
-
-	resp, err := client.httpClient.Post(url, "application/json", bytes.NewBuffer(jsonInput))
-	if err != nil {
-		return fmt.Errorf("failed to create post request: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusCreated {
-		return createResponseMismatchError(resp.Body).Wrap(fmt.Sprintf(
-			"expected %v response, got %v",
-			http.StatusCreated, resp.StatusCode))
+		return fmt.Errorf("failed to add key value pair for %v/%v zone: %v", base, zone, err)
 	}
 	return nil
 }
 
 // ModifyKeyValPair modifies the value of an existing key in a given HTTP zone.
 func (client *NginxClient) ModifyKeyValPair(zone string, key string, val string) error {
-	return client.modifyKeyValPair(zone, key, val, HTTP)
+	return client.modifyKeyValPair(zone, key, val, httpContext)
 }
 
 // ModifyStreamKeyValPair modifies the value of an existing key in a given Stream zone.
 func (client *NginxClient) ModifyStreamKeyValPair(zone string, key string, val string) error {
-	return client.modifyKeyValPair(zone, key, val, Stream)
+	return client.modifyKeyValPair(zone, key, val, streamContext)
 }
 
 func (client *NginxClient) modifyKeyValPair(zone string, key string, val string, stream bool) error {
@@ -925,46 +926,27 @@ func (client *NginxClient) modifyKeyValPair(zone string, key string, val string,
 	if stream {
 		base = "stream"
 	}
-	path := fmt.Sprintf("%v/keyvals", base)
-	url := fmt.Sprintf("%v/%v/%v", client.apiEndpoint, APIVersion, path)
-	if zone != "" {
-		url = fmt.Sprintf("%v/%v", url, zone)
-	} else {
+	if zone == "" {
 		return fmt.Errorf("zone required")
 	}
 
-	jsonInput, err := json.Marshal(KeyValPairs{key: val})
+	path := fmt.Sprintf("%v/keyvals/%v", base, zone)
+	input := KeyValPairs{key: val}
+	err := client.patch(path, &input)
 	if err != nil {
-		return fmt.Errorf("failed to marshall input: %v", err)
-	}
-	req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(jsonInput))
-	if err != nil {
-		return fmt.Errorf("failed to create a patch request: %v", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := client.httpClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("failed to do patch request: %v", err)
-	}
-	defer resp.Body.Close()
-	// We will consider ONLY 204 as success
-	if resp.StatusCode != http.StatusNoContent {
-		return createResponseMismatchError(resp.Body).Wrap(fmt.Sprintf(
-			"expected %v response, got %v",
-			http.StatusNoContent, resp.StatusCode))
+		return fmt.Errorf("failed to update key value pair for %v/%v zone: %v", base, zone, err)
 	}
 	return nil
 }
 
 // DeleteKeyValuePair deletes the key/value pair for a key in a given HTTP zone.
 func (client *NginxClient) DeleteKeyValuePair(zone string, key string) error {
-	return client.deleteKeyValuePair(zone, key, HTTP)
+	return client.deleteKeyValuePair(zone, key, httpContext)
 }
 
 // DeleteStreamKeyValuePair deletes the key/value pair for a key in a given Stream zone.
 func (client *NginxClient) DeleteStreamKeyValuePair(zone string, key string) error {
-	return client.deleteKeyValuePair(zone, key, Stream)
+	return client.deleteKeyValuePair(zone, key, streamContext)
 }
 
 // To delete a key/value pair you set the value to null via the API,
@@ -974,11 +956,7 @@ func (client *NginxClient) deleteKeyValuePair(zone string, key string, stream bo
 	if stream {
 		base = "stream"
 	}
-	path := fmt.Sprintf("%v/keyvals", base)
-	url := fmt.Sprintf("%v/%v/%v", client.apiEndpoint, APIVersion, path)
-	if zone != "" {
-		url = fmt.Sprintf("%v/%v", url, zone)
-	} else {
+	if zone == "" {
 		return fmt.Errorf("zone required")
 	}
 
@@ -986,40 +964,22 @@ func (client *NginxClient) deleteKeyValuePair(zone string, key string, stream bo
 	keyval := make(map[string]interface{})
 	keyval[key] = nil
 
-	jsonInput, err := json.Marshal(keyval)
+	path := fmt.Sprintf("%v/keyvals/%v", base, zone)
+	err := client.patch(path, &keyval)
 	if err != nil {
-		return fmt.Errorf("failed to marshall input: %v", err)
-	}
-
-	req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(jsonInput))
-	if err != nil {
-		return fmt.Errorf("failed to create a patch request: %v", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := client.httpClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("failed to do patch request: %v", err)
-	}
-	defer resp.Body.Close()
-
-	// Expect status 204
-	if resp.StatusCode != http.StatusNoContent {
-		return createResponseMismatchError(resp.Body).Wrap(fmt.Sprintf(
-			"expected %v response, got %v",
-			http.StatusNoContent, resp.StatusCode))
+		return fmt.Errorf("failed to remove key values pair for %v/%v zone: %v", base, zone, err)
 	}
 	return nil
 }
 
 // DeleteKeyValPairs deletes all the key-value pairs in a given HTTP zone.
 func (client *NginxClient) DeleteKeyValPairs(zone string) error {
-	return client.deleteKeyValPairs(zone, HTTP)
+	return client.deleteKeyValPairs(zone, httpContext)
 }
 
 // DeleteStreamKeyValPairs deletes all the key-value pairs in a given Stream zone.
 func (client *NginxClient) DeleteStreamKeyValPairs(zone string) error {
-	return client.deleteKeyValPairs(zone, Stream)
+	return client.deleteKeyValPairs(zone, streamContext)
 }
 
 func (client *NginxClient) deleteKeyValPairs(zone string, stream bool) error {
@@ -1030,25 +990,11 @@ func (client *NginxClient) deleteKeyValPairs(zone string, stream bool) error {
 	if zone == "" {
 		return fmt.Errorf("zone required")
 	}
+
 	path := fmt.Sprintf("%v/keyvals/%v", base, zone)
-	url := fmt.Sprintf("%v/%v/%v", client.apiEndpoint, APIVersion, path)
-
-	req, err := http.NewRequest(http.MethodDelete, url, nil)
+	err := client.delete(path, http.StatusNoContent)
 	if err != nil {
-		return fmt.Errorf("failed to create a delete request: %v", err)
-	}
-
-	resp, err := client.httpClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("failed to do delete request: %v", err)
-	}
-	defer resp.Body.Close()
-
-	// expect status 204
-	if resp.StatusCode != http.StatusNoContent {
-		return createResponseMismatchError(resp.Body).Wrap(fmt.Sprintf(
-			"expected %v response, got %v",
-			http.StatusNoContent, resp.StatusCode))
+		return fmt.Errorf("failed to remove all key value pairs for %v/%v zone: %v", base, zone, err)
 	}
 	return nil
 }
