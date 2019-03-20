@@ -3,6 +3,9 @@ NGINX_IMAGE=nginxplus:$(NGINX_PLUS_VERSION)
 
 test: docker-build run-nginx-plus test-run configure-no-stream-block test-run-no-stream-block clean
 
+lint:
+	golangci-lint run
+
 docker-build:
 	docker build --build-arg NGINX_PLUS_VERSION=$(NGINX_PLUS_VERSION)~stretch -t $(NGINX_IMAGE) docker
 
