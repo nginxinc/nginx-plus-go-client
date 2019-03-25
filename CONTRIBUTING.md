@@ -1,6 +1,6 @@
 # Contributing Guidelines
 
-The following is a set of guidelines for contributing to the NGINX Plus Go SDK. We really appreciate that you are considering contributing!
+The following is a set of guidelines for contributing to the NGINX Plus Go Client. We really appreciate that you are considering contributing!
 
 #### Table Of Contents
 
@@ -14,7 +14,7 @@ The following is a set of guidelines for contributing to the NGINX Plus Go SDK. 
   * [Git Style Guide](#git-style-guide)
   * [Go Style Guide](#go-style-guide)
 
-[Code of Conduct](https://github.com/nginxinc/nginx-plus-go-sdk/blob/master/CODE_OF_CONDUCT.md)
+[Code of Conduct](https://github.com/nginxinc/nginx-plus-go-client/blob/master/CODE_OF_CONDUCT.md)
 
 ## Ask a Question
 

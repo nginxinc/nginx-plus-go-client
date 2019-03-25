@@ -2,7 +2,7 @@ language: go
 go:
 - "1.10"
 script:
-- echo "N+ go SDK commit:${TRAVIS_COMMIT}"
+- echo "commit:${TRAVIS_COMMIT}"
 jobs:
   include:
     - stage: Unit tests

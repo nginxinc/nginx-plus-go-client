@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nginxinc/nginx-plus-go-sdk/client"
+	"github.com/nginxinc/nginx-plus-go-client/client"
 )
 
 const (
