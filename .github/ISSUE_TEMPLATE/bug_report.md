@@ -18,7 +18,7 @@ Steps to reproduce the behavior, such as:
 A clear and concise description of what you expected to happen.
 
 **Your environment**
-* Version of nginx-plus-go-sdk
+* Version of nginx-plus-go-client
 * Version of NGINX Plus
 * Version of the OS
 
