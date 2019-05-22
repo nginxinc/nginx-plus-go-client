@@ -1,4 +1,4 @@
-NGINX_PLUS_VERSION=17-1
+NGINX_PLUS_VERSION=18-1
 NGINX_IMAGE=nginxplus:$(NGINX_PLUS_VERSION)
 
 test: docker-build run-nginx-plus test-run configure-no-stream-block test-run-no-stream-block clean
@@ -14,14 +14,16 @@ run-nginx-plus:
 
 test-run:
 	go test client/*
-	GOCACHE=off go test tests/client_test.go
+	go clean -testcache
+	go test tests/client_test.go 
 
 configure-no-stream-block:
 	docker cp docker/nginx_no_stream.conf nginx-plus-test:/etc/nginx/nginx.conf
 	docker exec nginx-plus-test nginx -s reload
 
 test-run-no-stream-block:
-	GOCACHE=off go test tests/client_no_stream_test.go
+	go clean -testcache
+	go test tests/client_no_stream_test.go
 
 clean:
 	docker kill nginx-plus-test
