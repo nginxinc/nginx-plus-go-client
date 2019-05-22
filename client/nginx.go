@@ -10,9 +10,9 @@ import (
 )
 
 // APIVersion is a version of NGINX Plus API.
-const APIVersion = 2
+const APIVersion = 4
 
-const streamNotConfiguredCode = "StreamNotConfigured"
+const pathNotFoundCode = "PathNotFound"
 
 const streamContext = true
 const httpContext = false
@@ -44,16 +44,14 @@ type StreamUpstreamServer struct {
 }
 
 type apiErrorResponse struct {
-	Path      string
-	Method    string
 	Error     apiError
 	RequestID string `json:"request_id"`
 	Href      string
 }
 
 func (resp *apiErrorResponse) toString() string {
-	return fmt.Sprintf("path=%v; method=%v; error.status=%v; error.text=%v; error.code=%v; request_id=%v; href=%v",
-		resp.Path, resp.Method, resp.Error.Status, resp.Error.Text, resp.Error.Code, resp.RequestID, resp.Href)
+	return fmt.Sprintf("error.status=%v; error.text=%v; error.code=%v; request_id=%v; href=%v",
+		resp.Error.Status, resp.Error.Text, resp.Error.Code, resp.RequestID, resp.Href)
 }
 
 type apiError struct {
@@ -792,7 +790,7 @@ func (client *NginxClient) getStreamServerZones() (*StreamServerZones, error) {
 	err := client.get("stream/server_zones", &zones)
 	if err != nil {
 		if err, ok := err.(*internalError); ok {
-			if err.Code == streamNotConfiguredCode {
+			if err.Code == pathNotFoundCode {
 				return &zones, nil
 			}
 		}
@@ -815,7 +813,7 @@ func (client *NginxClient) getStreamUpstreams() (*StreamUpstreams, error) {
 	err := client.get("stream/upstreams", &upstreams)
 	if err != nil {
 		if err, ok := err.(*internalError); ok {
-			if err.Code == streamNotConfiguredCode {
+			if err.Code == pathNotFoundCode {
 				return &upstreams, nil
 			}
 		}
