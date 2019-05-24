@@ -13,6 +13,7 @@ import (
 const (
 	upstream       = "test"
 	streamUpstream = "stream_test"
+	streamZoneSync = "zone_test_sync"
 )
 
 func TestStreamClient(t *testing.T) {
@@ -673,7 +674,8 @@ func TestKeyValueStream(t *testing.T) {
 		t.Errorf("Couldn't get keyvals, %v", err)
 	}
 	expectedKeyValuePairsByZone := client.KeyValPairsByZone{
-		zoneName: expectedKeyValPairs,
+		zoneName:       expectedKeyValPairs,
+		streamZoneSync: client.KeyValPairs{},
 	}
 	if !reflect.DeepEqual(expectedKeyValuePairsByZone, keyValPairsByZone) {
 		t.Errorf("maps are not equal. expected: %+v, got: %+v", expectedKeyValuePairsByZone, keyValPairsByZone)
@@ -738,6 +740,98 @@ func TestKeyValueStream(t *testing.T) {
 	err = c.ModifyStreamKeyValPair(zoneName, "key1", "valModified")
 	if err == nil {
 		t.Errorf("modifying nonexistent key/val should result in error")
+	}
+}
+
+func TestStreamZoneSync(t *testing.T) {
+	c1, err := client.NewNginxClient(&http.Client{}, "http://127.0.0.1:8080/api")
+	if err != nil {
+		t.Fatalf("Error connecting to nginx: %v", err)
+	}
+
+	c2, err := client.NewNginxClient(&http.Client{}, "http://127.0.0.1:8090/api")
+	if err != nil {
+		t.Fatalf("Error connecting to nginx: %v", err)
+	}
+
+	err = c1.AddStreamKeyValPair(streamZoneSync, "key1", "val1")
+	if err != nil {
+		t.Errorf("Couldn't set keyvals: %v", err)
+	}
+
+	// wait for nodes to sync information of synced zones
+	time.Sleep(5 * time.Second)
+
+	statsC1, err := c1.GetStats()
+	if err != nil {
+		t.Errorf("Error getting stats: %v", err)
+	}
+
+	if statsC1.StreamZoneSync.Status.NodesOnline == 0 {
+		t.Errorf("At least 1 node must be online")
+	}
+
+	if statsC1.StreamZoneSync.Status.MsgsOut == 0 {
+		t.Errorf("Msgs out cannot be 0")
+	}
+
+	if statsC1.StreamZoneSync.Status.MsgsIn == 0 {
+		t.Errorf("Msgs in cannot be 0")
+	}
+
+	if statsC1.StreamZoneSync.Status.BytesIn == 0 {
+		t.Errorf("Bytes in cannot be 0")
+	}
+
+	if statsC1.StreamZoneSync.Status.BytesOut == 0 {
+		t.Errorf("Bytes Out cannot be 0")
+	}
+
+	if zone, ok := statsC1.StreamZoneSync.Zones[streamZoneSync]; ok {
+		if zone.RecordsTotal == 0 {
+			t.Errorf("Total records cannot be 0 after adding keyvals")
+		}
+		if zone.RecordsPending != 0 {
+			t.Errorf("Pending records must be 0 after adding keyvals")
+		}
+	} else {
+		t.Errorf("Sync zone %v missing in stats", streamZoneSync)
+	}
+
+	statsC2, err := c2.GetStats()
+	if err != nil {
+		t.Errorf("Error getting stats: %v", err)
+	}
+
+	if statsC2.StreamZoneSync.Status.NodesOnline == 0 {
+		t.Errorf("At least 1 node must be online")
+	}
+
+	if statsC2.StreamZoneSync.Status.MsgsOut != 0 {
+		t.Errorf("Msgs out must be 0")
+	}
+
+	if statsC2.StreamZoneSync.Status.MsgsIn == 0 {
+		t.Errorf("Msgs in cannot be 0")
+	}
+
+	if statsC2.StreamZoneSync.Status.BytesIn == 0 {
+		t.Errorf("Bytes in cannot be 0")
+	}
+
+	if statsC2.StreamZoneSync.Status.BytesOut != 0 {
+		t.Errorf("Bytes out must be 0")
+	}
+
+	if zone, ok := statsC2.StreamZoneSync.Zones[streamZoneSync]; ok {
+		if zone.RecordsTotal == 0 {
+			t.Errorf("Total records cannot be 0 after adding keyvals")
+		}
+		if zone.RecordsPending != 0 {
+			t.Errorf("Pending records must be 0 after adding keyvals")
+		}
+	} else {
+		t.Errorf("Sync zone %v missing in stats", streamZoneSync)
 	}
 }
 

@@ -40,7 +40,7 @@ Run Tests:
 $ make test
 ```
 
-This will build and run an NGINX Plus container, execute the client tests against NGINX Plus API, and then clean up. If it fails and you want to clean up (i.e. stop the running container), please use `$ make clean`
+This will build and run two NGINX Plus containers and create one docker network of type bridge, execute the client tests against both NGINX Plus APIs, and then clean up. If it fails and you want to clean up (i.e. stop the running containers and remove the docker network), please use `$ make clean`
 
 ## Support
 This project is not covered by the NGINX Plus support contract.
