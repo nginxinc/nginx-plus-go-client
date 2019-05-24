@@ -10,7 +10,9 @@ docker-build:
 	docker build --build-arg NGINX_PLUS_VERSION=$(NGINX_PLUS_VERSION)~stretch -t $(NGINX_IMAGE) docker
 
 run-nginx-plus:
-	docker run -d --name nginx-plus-test --rm -p 8080:8080 -p 8081:8081 $(NGINX_IMAGE)
+	docker network create --driver bridge test
+	docker run --network=test -d --name nginx-plus-test --network-alias=nginx-plus-test --rm -p 8080:8080 -p 8081:8081 $(NGINX_IMAGE)
+	docker run --network=test -d --name nginx-plus-test-helper --network-alias=nginx-plus-test --rm -p 8090:8080 -p 8091:8081 $(NGINX_IMAGE)
 
 test-run:
 	go test client/*
@@ -26,4 +28,6 @@ test-run-no-stream-block:
 	go test tests/client_no_stream_test.go
 
 clean:
-	docker kill nginx-plus-test
+	-docker kill nginx-plus-test
+	-docker kill nginx-plus-test-helper
+	-docker network rm test

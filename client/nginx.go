@@ -88,6 +88,7 @@ type Stats struct {
 	Upstreams         Upstreams
 	StreamServerZones StreamServerZones
 	StreamUpstreams   StreamUpstreams
+	StreamZoneSync    StreamZoneSync
 }
 
 // NginxInfo contains general information about NGINX Plus.
@@ -147,6 +148,27 @@ type StreamServerZone struct {
 	Discarded   uint64
 	Received    uint64
 	Sent        uint64
+}
+
+// StreamZoneSync represents the sync information per each shared memory zone and the sync information per node in a cluster
+type StreamZoneSync struct {
+	Zones  map[string]SyncZone
+	Status StreamZoneSyncStatus
+}
+
+// SyncZone represents the syncronization status of a shared memory zone
+type SyncZone struct {
+	RecordsPending uint64 `json:"records_pending"`
+	RecordsTotal   uint64 `json:"records_total"`
+}
+
+// StreamZoneSyncStatus represents the status of a shared memory zone
+type StreamZoneSyncStatus struct {
+	BytesIn     uint64 `json:"bytes_in"`
+	MsgsIn      uint64 `json:"msgs_in"`
+	MsgsOut     uint64 `json:"msgs_out"`
+	BytesOut    uint64 `json:"bytes_out"`
+	NodesOnline uint64 `json:"nodes_online"`
 }
 
 // Responses represents HTTP response related stats.
@@ -728,6 +750,11 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 		return nil, fmt.Errorf("failed to get stats: %v", err)
 	}
 
+	streamZoneSync, err := client.getStreamZoneSync()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get stats: %v", err)
+	}
+
 	return &Stats{
 		NginxInfo:         *info,
 		Connections:       *cons,
@@ -737,6 +764,7 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 		StreamServerZones: *streamZones,
 		Upstreams:         *upstreams,
 		StreamUpstreams:   *streamUpstreams,
+		StreamZoneSync:    *streamZoneSync,
 	}, nil
 }
 
@@ -820,6 +848,22 @@ func (client *NginxClient) getStreamUpstreams() (*StreamUpstreams, error) {
 		return nil, fmt.Errorf("failed to get stream upstreams: %v", err)
 	}
 	return &upstreams, nil
+}
+
+func (client *NginxClient) getStreamZoneSync() (*StreamZoneSync, error) {
+	var streamZoneSync StreamZoneSync
+	err := client.get("stream/zone_sync", &streamZoneSync)
+	if err != nil {
+		if err, ok := err.(*internalError); ok {
+
+			if err.Code == pathNotFoundCode {
+				return &streamZoneSync, nil
+			}
+		}
+		return nil, fmt.Errorf("failed to get stream zone sync: %v", err)
+	}
+
+	return &streamZoneSync, err
 }
 
 // KeyValPairs are the key-value pairs stored in a zone.
