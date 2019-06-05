@@ -767,6 +767,10 @@ func TestStreamZoneSync(t *testing.T) {
 		t.Errorf("Error getting stats: %v", err)
 	}
 
+	if statsC1.StreamZoneSync == nil {
+		t.Errorf("Stream zone sync can't be nil if configured")
+	}
+
 	if statsC1.StreamZoneSync.Status.NodesOnline == 0 {
 		t.Errorf("At least 1 node must be online")
 	}
@@ -801,6 +805,10 @@ func TestStreamZoneSync(t *testing.T) {
 	statsC2, err := c2.GetStats()
 	if err != nil {
 		t.Errorf("Error getting stats: %v", err)
+	}
+
+	if statsC2.StreamZoneSync == nil {
+		t.Errorf("Stream zone sync can't be nil if configured")
 	}
 
 	if statsC2.StreamZoneSync.Status.NodesOnline == 0 {

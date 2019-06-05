@@ -34,4 +34,8 @@ func TestStatsNoStream(t *testing.T) {
 	if len(stats.StreamUpstreams) != 0 {
 		t.Error("No stream block should result in no StreamUpstreams")
 	}
+
+	if stats.StreamZoneSync != nil {
+		t.Error("No stream block should result in StreamZoneSync = `nil`")
+	}
 }
