@@ -1,3 +1,7 @@
+## 0.3.1 (June 10, 2019)
+CHANGES:
+* [22](https://github.com/nginxinc/nginx-plus-go-client/pull/22): *Change in stream zone sync metrics*. `StreamZoneSync` field of the `Stats` type is now a pointer. It will be nil if NGINX Plus doesn't report any zone sync stats.
+
 ## 0.3 (May 29, 2019)
 FEATURES:
 * [20](https://github.com/nginxinc/nginx-plus-go-client/pull/20): *Support for stream zone sync metrics*. The client `GetStats` method now additionally returns stream zone sync metrics. 
