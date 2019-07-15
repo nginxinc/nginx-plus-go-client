@@ -186,8 +186,8 @@ type Responses struct {
 // Sessions represents stream session related stats.
 type Sessions struct {
 	Sessions2xx uint64 `json:"2xx"`
-	Sessions4xx uint64 `json:"4xx"`
-	Sessions5xx uint64 `json:"5xx"`
+	Sessions4xx uint64 `josn:"4xx"`
+	Sessions5xx uint64 `josn:"5xx"`
 	Total       uint64
 }
 
