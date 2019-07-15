@@ -158,7 +158,7 @@ type StreamZoneSync struct {
 	Status StreamZoneSyncStatus
 }
 
-// SyncZone represents the syncronization status of a shared memory zone
+// SyncZone represents the synchronization status of a shared memory zone
 type SyncZone struct {
 	RecordsPending uint64 `json:"records_pending"`
 	RecordsTotal   uint64 `json:"records_total"`
