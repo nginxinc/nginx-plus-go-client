@@ -29,6 +29,7 @@ type versions []int
 type UpstreamServer struct {
 	ID          int    `json:"id,omitempty"`
 	Server      string `json:"server"`
+	MaxConns    int    `json:"max_conns"`
 	MaxFails    int    `json:"max_fails"`
 	FailTimeout string `json:"fail_timeout,omitempty"`
 	SlowStart   string `json:"slow_start,omitempty"`
@@ -38,6 +39,7 @@ type UpstreamServer struct {
 type StreamUpstreamServer struct {
 	ID          int    `json:"id,omitempty"`
 	Server      string `json:"server"`
+	MaxConns    int    `json:"max_conns"`
 	MaxFails    int    `json:"max_fails"`
 	FailTimeout string `json:"fail_timeout,omitempty"`
 	SlowStart   string `json:"slow_start,omitempty"`
@@ -156,7 +158,7 @@ type StreamZoneSync struct {
 	Status StreamZoneSyncStatus
 }
 
-// SyncZone represents the syncronization status of a shared memory zone
+// SyncZone represents the synchronization status of a shared memory zone
 type SyncZone struct {
 	RecordsPending uint64 `json:"records_pending"`
 	RecordsTotal   uint64 `json:"records_total"`

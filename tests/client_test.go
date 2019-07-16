@@ -209,7 +209,7 @@ func TestClient(t *testing.T) {
 		t.Fatalf("Error when creating a client: %v", err)
 	}
 
-	// test checking an upstream for exististence
+	// test checking an upstream for existence
 
 	err = c.CheckIfUpstreamExists(upstream)
 	if err != nil {
