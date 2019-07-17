@@ -3,7 +3,7 @@ FEATURES:
 * [24](https://github.com/nginxinc/nginx-plus-go-client/pull/24): *Support `MaxConns` in upstream servers*.
 
 BUGFIXES:
-* [25](https://github.com/nginxinc/nginx-plus-go-client/pull/25): *Fix session metrics for stream upstreams*. Session metrics with a status of `4xx` or `5xx` are now correctly reported. Previously they were always reported as `0`.
+* [25](https://github.com/nginxinc/nginx-plus-go-client/pull/25): *Fix session metrics for stream server zones*. Session metrics with a status of `4xx` or `5xx` are now correctly reported. Previously they were always reported as `0`.
 
 ## 0.3.1 (June 10, 2019)
 CHANGES:
