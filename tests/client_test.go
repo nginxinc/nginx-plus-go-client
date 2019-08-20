@@ -240,7 +240,7 @@ func TestStreamUpstreamServerMaxFails(t *testing.T) {
 
 	// Add a server with max_fails
 	streamServer := createDefaultStreamUpstreamServer()
-	streamServer.MaxFails = 32
+	*streamServer.MaxFails = 32
 	err = c.AddStreamServer(streamUpstream, streamServer)
 	if err != nil {
 		t.Errorf("Error adding upstream server: %v", err)
@@ -497,7 +497,7 @@ func TestUpstreamServerMaxFails(t *testing.T) {
 
 	// Add a server with max_fails
 	server := createDefaultUpstreamServer()
-	server.MaxFails = 16
+	*server.MaxFails = 16
 	err = c.AddHTTPServer(upstream, server)
 	if err != nil {
 		t.Errorf("Error adding upstream server: %v", err)
@@ -1145,19 +1145,21 @@ func compareStreamUpstreamServers(x []client.StreamUpstreamServer, y []client.St
 }
 
 func createDefaultUpstreamServer() client.UpstreamServer {
+	defaultMaxFails := 1
 	return client.UpstreamServer{
 		Server:      "127.0.0.1:2000",
 		SlowStart:   "0s",
-		MaxFails:    1,
+		MaxFails:    &defaultMaxFails,
 		FailTimeout: "10s",
 	}
 }
 
 func createDefaultStreamUpstreamServer() client.StreamUpstreamServer {
+	defaultMaxFails := 1
 	return client.StreamUpstreamServer{
 		Server:      "127.0.0.1:2000",
 		SlowStart:   "0s",
-		MaxFails:    1,
+		MaxFails:    &defaultMaxFails,
 		FailTimeout: "10s",
 	}
 }
