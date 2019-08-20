@@ -196,7 +196,7 @@ func TestStreamUpstreamServer(t *testing.T) {
 		t.Errorf("Expected: %v Got: %v", streamServer, servers[0])
 	}
 
-	// remove upstream servers
+	// remove stream upstream servers
 	_, _, err = c.UpdateStreamServers(streamUpstream, []client.StreamUpstreamServer{})
 	if err != nil {
 		t.Errorf("Couldn't remove servers: %v", err)
@@ -362,7 +362,6 @@ func TestUpstreamServer(t *testing.T) {
 		t.Fatalf("Error connecting to nginx: %v", err)
 	}
 
-	// Add a server with slow_start
 	maxFails := 64
 	server := client.UpstreamServer{
 		Server:      "127.0.0.1:2000",
