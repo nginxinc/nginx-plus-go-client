@@ -171,9 +171,11 @@ func TestStreamUpstreamServerSlowStart(t *testing.T) {
 
 	// Add a server with slow_start
 	// (And FailTimeout, since the default is 10s)
+	// (And MaxFails, since the default is 1)
 	streamServer := client.StreamUpstreamServer{
 		Server:      "127.0.0.1:2000",
 		SlowStart:   "11s",
+		MaxFails:    1,
 		FailTimeout: "10s",
 	}
 	err = c.AddStreamServer(streamUpstream, streamServer)
@@ -363,9 +365,11 @@ func TestUpstreamServerSlowStart(t *testing.T) {
 
 	// Add a server with slow_start
 	// (And FailTimeout, since the default is 10s)
+	// (And MaxFails, sice the default is 1)
 	server := client.UpstreamServer{
 		Server:      "127.0.0.1:2000",
 		SlowStart:   "11s",
+		MaxFails:    1,
 		FailTimeout: "10s",
 	}
 	err = c.AddHTTPServer(upstream, server)
@@ -547,6 +551,51 @@ func TestStreamStats(t *testing.T) {
 		t.Errorf("Couldn't remove stream servers: %v", err)
 	}
 }
+
+func TestUpstreamServerDefaultParameters(t *testing.T) {
+	httpClient := &http.Client{}
+	c, err := client.NewNginxClient(httpClient, "http://127.0.0.1:8080/api")
+	if err != nil {
+		t.Fatalf("Error connecting to nginx: %v", err)
+	}
+
+	server := client.UpstreamServer{
+		Server: "127.0.0.1:2000",
+	}
+
+	expected := client.UpstreamServer{
+		Server:      "127.0.0.1:2000",
+		MaxConns:    0,
+		MaxFails:    1,
+		FailTimeout: "10s",
+		SlowStart:   "0s",
+	}
+
+	err = c.AddHTTPServer(upstream, server)
+	if err != nil {
+		t.Errorf("Error adding upstream server: %v", err)
+	}
+	servers, err := c.GetHTTPServers(upstream)
+	if err != nil {
+		t.Fatalf("Error getting HTTPServers: %v", err)
+	}
+	if len(servers) != 1 {
+		t.Errorf("Too many servers")
+	}
+	// don't compare IDs
+	servers[0].ID = 0
+
+	if !reflect.DeepEqual(expected, servers[0]) {
+		t.Errorf("Expected: %v Got: %v", expected, servers[0])
+	}
+
+	// remove upstream servers
+	_, _, err = c.UpdateHTTPServers(upstream, []client.UpstreamServer{})
+	if err != nil {
+		t.Errorf("Couldn't remove servers: %v", err)
+	}
+}
+
 func TestKeyValue(t *testing.T) {
 	zoneName := "zone_one"
 	httpClient := &http.Client{}

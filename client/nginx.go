@@ -30,7 +30,7 @@ type UpstreamServer struct {
 	ID          int    `json:"id,omitempty"`
 	Server      string `json:"server"`
 	MaxConns    int    `json:"max_conns"`
-	MaxFails    int    `json:"max_fails"`
+	MaxFails    int    `json:"max_fails,omitempty"`
 	FailTimeout string `json:"fail_timeout,omitempty"`
 	SlowStart   string `json:"slow_start,omitempty"`
 }
@@ -40,7 +40,7 @@ type StreamUpstreamServer struct {
 	ID          int    `json:"id,omitempty"`
 	Server      string `json:"server"`
 	MaxConns    int    `json:"max_conns"`
-	MaxFails    int    `json:"max_fails"`
+	MaxFails    int    `json:"max_fails,omitempty"`
 	FailTimeout string `json:"fail_timeout,omitempty"`
 	SlowStart   string `json:"slow_start,omitempty"`
 }
