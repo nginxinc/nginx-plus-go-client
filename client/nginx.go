@@ -17,6 +17,8 @@ const pathNotFoundCode = "PathNotFound"
 const streamContext = true
 const httpContext = false
 
+var defaultMaxFails = 1
+
 // NginxClient lets you access NGINX Plus API.
 type NginxClient struct {
 	apiEndpoint string
@@ -387,7 +389,6 @@ func (client *NginxClient) AddHTTPServer(upstream string, server UpstreamServer)
 	}
 
 	if server.MaxFails == nil {
-		defaultMaxFails := 1
 		server.MaxFails = &defaultMaxFails
 	}
 
@@ -617,7 +618,6 @@ func (client *NginxClient) AddStreamServer(upstream string, server StreamUpstrea
 	}
 
 	if server.MaxFails == nil {
-		defaultMaxFails := 1
 		server.MaxFails = &defaultMaxFails
 	}
 

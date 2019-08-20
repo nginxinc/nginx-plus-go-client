@@ -16,6 +16,8 @@ const (
 	streamZoneSync = "zone_test_sync"
 )
 
+var defaultMaxFails = 1
+
 func TestStreamClient(t *testing.T) {
 	httpClient := &http.Client{}
 	c, err := client.NewNginxClient(httpClient, "http://127.0.0.1:8080/api")
@@ -490,7 +492,12 @@ func TestUpstreamServerDefaultParameters(t *testing.T) {
 		Server: "127.0.0.1:2000",
 	}
 
-	expected := createDefaultUpstreamServer()
+	expected := client.UpstreamServer{
+		Server:      "127.0.0.1:2000",
+		SlowStart:   "0s",
+		MaxFails:    &defaultMaxFails,
+		FailTimeout: "10s",
+	}
 	err = c.AddHTTPServer(upstream, server)
 	if err != nil {
 		t.Errorf("Error adding upstream server: %v", err)
@@ -597,7 +604,12 @@ func TestStreamUpstreamServerDefaultParameters(t *testing.T) {
 		Server: "127.0.0.1:2000",
 	}
 
-	expected := createDefaultStreamUpstreamServer()
+	expected := client.StreamUpstreamServer{
+		Server:      "127.0.0.1:2000",
+		SlowStart:   "0s",
+		MaxFails:    &defaultMaxFails,
+		FailTimeout: "10s",
+	}
 	err = c.AddStreamServer(streamUpstream, streamServer)
 	if err != nil {
 		t.Errorf("Error adding upstream server: %v", err)
@@ -943,24 +955,4 @@ func compareStreamUpstreamServers(x []client.StreamUpstreamServer, y []client.St
 	}
 
 	return reflect.DeepEqual(xServers, yServers)
-}
-
-func createDefaultUpstreamServer() client.UpstreamServer {
-	defaultMaxFails := 1
-	return client.UpstreamServer{
-		Server:      "127.0.0.1:2000",
-		SlowStart:   "0s",
-		MaxFails:    &defaultMaxFails,
-		FailTimeout: "10s",
-	}
-}
-
-func createDefaultStreamUpstreamServer() client.StreamUpstreamServer {
-	defaultMaxFails := 1
-	return client.StreamUpstreamServer{
-		Server:      "127.0.0.1:2000",
-		SlowStart:   "0s",
-		MaxFails:    &defaultMaxFails,
-		FailTimeout: "10s",
-	}
 }
