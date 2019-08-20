@@ -161,121 +161,21 @@ func TestStreamClient(t *testing.T) {
 	}
 }
 
-func TestStreamUpstreamServerSlowStart(t *testing.T) {
+func TestStreamUpstreamServer(t *testing.T) {
 	httpClient := &http.Client{}
 	c, err := client.NewNginxClient(httpClient, "http://127.0.0.1:8080/api")
 	if err != nil {
 		t.Fatalf("Error connecting to nginx: %v", err)
 	}
 
-	// Add a server with slow_start
-	streamServer := createDefaultStreamUpstreamServer()
-	streamServer.SlowStart = "11s"
-	err = c.AddStreamServer(streamUpstream, streamServer)
-	if err != nil {
-		t.Errorf("Error adding upstream server: %v", err)
+	maxFails := 64
+	streamServer := client.StreamUpstreamServer{
+		Server:      "127.0.0.1:2000",
+		MaxConns:    321,
+		MaxFails:    &maxFails,
+		FailTimeout: "21s",
+		SlowStart:   "12s",
 	}
-	servers, err := c.GetStreamServers(streamUpstream)
-	if err != nil {
-		t.Fatalf("Error getting stream servers: %v", err)
-	}
-	if len(servers) != 1 {
-		t.Errorf("Too many servers")
-	}
-	// don't compare IDs
-	servers[0].ID = 0
-
-	if !reflect.DeepEqual(streamServer, servers[0]) {
-		t.Errorf("Expected: %v Got: %v", streamServer, servers[0])
-	}
-
-	// remove upstream servers
-	_, _, err = c.UpdateStreamServers(streamUpstream, []client.StreamUpstreamServer{})
-	if err != nil {
-		t.Errorf("Couldn't remove servers: %v", err)
-	}
-}
-
-func TestStreamUpstreamServerMaxConns(t *testing.T) {
-	httpClient := &http.Client{}
-	c, err := client.NewNginxClient(httpClient, "http://127.0.0.1:8080/api")
-	if err != nil {
-		t.Fatalf("Error connecting to nginx: %v", err)
-	}
-
-	// Add a server with max_conns
-	streamServer := createDefaultStreamUpstreamServer()
-	streamServer.MaxConns = 16
-	err = c.AddStreamServer(streamUpstream, streamServer)
-	if err != nil {
-		t.Errorf("Error adding upstream server: %v", err)
-	}
-	servers, err := c.GetStreamServers(streamUpstream)
-	if err != nil {
-		t.Fatalf("Error getting stream servers: %v", err)
-	}
-	if len(servers) != 1 {
-		t.Errorf("Too many servers")
-	}
-	// don't compare IDs
-	servers[0].ID = 0
-
-	if !reflect.DeepEqual(streamServer, servers[0]) {
-		t.Errorf("Expected: %v Got: %v", streamServer, servers[0])
-	}
-
-	// remove upstream servers
-	_, _, err = c.UpdateStreamServers(streamUpstream, []client.StreamUpstreamServer{})
-	if err != nil {
-		t.Errorf("Couldn't remove servers: %v", err)
-	}
-}
-
-func TestStreamUpstreamServerMaxFails(t *testing.T) {
-	httpClient := &http.Client{}
-	c, err := client.NewNginxClient(httpClient, "http://127.0.0.1:8080/api")
-	if err != nil {
-		t.Fatalf("Error connecting to nginx: %v", err)
-	}
-
-	// Add a server with max_fails
-	streamServer := createDefaultStreamUpstreamServer()
-	*streamServer.MaxFails = 32
-	err = c.AddStreamServer(streamUpstream, streamServer)
-	if err != nil {
-		t.Errorf("Error adding upstream server: %v", err)
-	}
-	servers, err := c.GetStreamServers(streamUpstream)
-	if err != nil {
-		t.Fatalf("Error getting stream servers: %v", err)
-	}
-	if len(servers) != 1 {
-		t.Errorf("Too many servers")
-	}
-	// don't compare IDs
-	servers[0].ID = 0
-
-	if !reflect.DeepEqual(streamServer, servers[0]) {
-		t.Errorf("Expected: %v Got: %v", streamServer, servers[0])
-	}
-
-	// remove upstream servers
-	_, _, err = c.UpdateStreamServers(streamUpstream, []client.StreamUpstreamServer{})
-	if err != nil {
-		t.Errorf("Couldn't remove servers: %v", err)
-	}
-}
-
-func TestStreamUpstreamServerFailTimeout(t *testing.T) {
-	httpClient := &http.Client{}
-	c, err := client.NewNginxClient(httpClient, "http://127.0.0.1:8080/api")
-	if err != nil {
-		t.Fatalf("Error connecting to nginx: %v", err)
-	}
-
-	// Add a server with fail_timeout
-	streamServer := createDefaultStreamUpstreamServer()
-	streamServer.FailTimeout = "20s"
 	err = c.AddStreamServer(streamUpstream, streamServer)
 	if err != nil {
 		t.Errorf("Error adding upstream server: %v", err)
@@ -453,112 +353,7 @@ func TestClient(t *testing.T) {
 	}
 }
 
-func TestUpstreamServerMaxConns(t *testing.T) {
-	httpClient := &http.Client{}
-	c, err := client.NewNginxClient(httpClient, "http://127.0.0.1:8080/api")
-	if err != nil {
-		t.Fatalf("Error connecting to nginx: %v", err)
-	}
-
-	// Add a server with max_conns
-	server := createDefaultUpstreamServer()
-	server.MaxConns = 64
-	err = c.AddHTTPServer(upstream, server)
-	if err != nil {
-		t.Errorf("Error adding upstream server: %v", err)
-	}
-	servers, err := c.GetHTTPServers(upstream)
-	if err != nil {
-		t.Fatalf("Error getting HTTPServers: %v", err)
-	}
-	if len(servers) != 1 {
-		t.Errorf("Too many servers")
-	}
-	// don't compare IDs
-	servers[0].ID = 0
-
-	if !reflect.DeepEqual(server, servers[0]) {
-		t.Errorf("Expected: %v Got: %v", server, servers[0])
-	}
-
-	// remove upstream servers
-	_, _, err = c.UpdateHTTPServers(upstream, []client.UpstreamServer{})
-	if err != nil {
-		t.Errorf("Couldn't remove servers: %v", err)
-	}
-}
-
-func TestUpstreamServerMaxFails(t *testing.T) {
-	httpClient := &http.Client{}
-	c, err := client.NewNginxClient(httpClient, "http://127.0.0.1:8080/api")
-	if err != nil {
-		t.Fatalf("Error connecting to nginx: %v", err)
-	}
-
-	// Add a server with max_fails
-	server := createDefaultUpstreamServer()
-	*server.MaxFails = 16
-	err = c.AddHTTPServer(upstream, server)
-	if err != nil {
-		t.Errorf("Error adding upstream server: %v", err)
-	}
-	servers, err := c.GetHTTPServers(upstream)
-	if err != nil {
-		t.Fatalf("Error getting HTTPServers: %v", err)
-	}
-	if len(servers) != 1 {
-		t.Errorf("Too many servers")
-	}
-	// don't compare IDs
-	servers[0].ID = 0
-
-	if !reflect.DeepEqual(server, servers[0]) {
-		t.Errorf("Expected: %v Got: %v", server, servers[0])
-	}
-
-	// remove upstream servers
-	_, _, err = c.UpdateHTTPServers(upstream, []client.UpstreamServer{})
-	if err != nil {
-		t.Errorf("Couldn't remove servers: %v", err)
-	}
-}
-
-func TestUpstreamServerFailTimeout(t *testing.T) {
-	httpClient := &http.Client{}
-	c, err := client.NewNginxClient(httpClient, "http://127.0.0.1:8080/api")
-	if err != nil {
-		t.Fatalf("Error connecting to nginx: %v", err)
-	}
-
-	// Add a server with fail_timeout
-	server := createDefaultUpstreamServer()
-	server.FailTimeout = "15s"
-	err = c.AddHTTPServer(upstream, server)
-	if err != nil {
-		t.Errorf("Error adding upstream server: %v", err)
-	}
-	servers, err := c.GetHTTPServers(upstream)
-	if err != nil {
-		t.Fatalf("Error getting HTTPServers: %v", err)
-	}
-	if len(servers) != 1 {
-		t.Errorf("Too many servers")
-	}
-	// don't compare IDs
-	servers[0].ID = 0
-
-	if !reflect.DeepEqual(server, servers[0]) {
-		t.Errorf("Expected: %v Got: %v", server, servers[0])
-	}
-
-	// remove upstream servers
-	_, _, err = c.UpdateHTTPServers(upstream, []client.UpstreamServer{})
-	if err != nil {
-		t.Errorf("Couldn't remove servers: %v", err)
-	}
-}
-
-func TestUpstreamServerSlowStart(t *testing.T) {
+func TestUpstreamServer(t *testing.T) {
 	httpClient := &http.Client{}
 	c, err := client.NewNginxClient(httpClient, "http://127.0.0.1:8080/api")
 	if err != nil {
@@ -566,8 +361,14 @@ func TestUpstreamServerSlowStart(t *testing.T) {
 	}
 
 	// Add a server with slow_start
-	server := createDefaultUpstreamServer()
-	server.SlowStart = "11s"
+	maxFails := 64
+	server := client.UpstreamServer{
+		Server:      "127.0.0.1:2000",
+		MaxConns:    321,
+		MaxFails:    &maxFails,
+		FailTimeout: "21s",
+		SlowStart:   "12s",
+	}
 	err = c.AddHTTPServer(upstream, server)
 	if err != nil {
 		t.Errorf("Error adding upstream server: %v", err)
