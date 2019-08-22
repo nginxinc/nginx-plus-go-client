@@ -17,8 +17,6 @@ const pathNotFoundCode = "PathNotFound"
 const streamContext = true
 const httpContext = false
 
-var defaultMaxFails = 1
-
 // NginxClient lets you access NGINX Plus API.
 type NginxClient struct {
 	apiEndpoint string
@@ -32,7 +30,7 @@ type UpstreamServer struct {
 	ID          int    `json:"id,omitempty"`
 	Server      string `json:"server"`
 	MaxConns    int    `json:"max_conns"`
-	MaxFails    *int   `json:"max_fails"`
+	MaxFails    *int   `json:"max_fails,omitempty"`
 	FailTimeout string `json:"fail_timeout,omitempty"`
 	SlowStart   string `json:"slow_start,omitempty"`
 }
@@ -42,7 +40,7 @@ type StreamUpstreamServer struct {
 	ID          int    `json:"id,omitempty"`
 	Server      string `json:"server"`
 	MaxConns    int    `json:"max_conns"`
-	MaxFails    *int   `json:"max_fails"`
+	MaxFails    *int   `json:"max_fails,omitempty"`
 	FailTimeout string `json:"fail_timeout,omitempty"`
 	SlowStart   string `json:"slow_start,omitempty"`
 }
@@ -388,10 +386,6 @@ func (client *NginxClient) AddHTTPServer(upstream string, server UpstreamServer)
 		return fmt.Errorf("failed to add %v server to %v upstream: server already exists", server.Server, upstream)
 	}
 
-	if server.MaxFails == nil {
-		server.MaxFails = &defaultMaxFails
-	}
-
 	path := fmt.Sprintf("http/upstreams/%v/servers/", upstream)
 	err = client.post(path, &server)
 	if err != nil {
@@ -615,10 +609,6 @@ func (client *NginxClient) AddStreamServer(upstream string, server StreamUpstrea
 	}
 	if id != -1 {
 		return fmt.Errorf("failed to add %v stream server to %v upstream: server already exists", server.Server, upstream)
-	}
-
-	if server.MaxFails == nil {
-		server.MaxFails = &defaultMaxFails
 	}
 
 	path := fmt.Sprintf("stream/upstreams/%v/servers/", upstream)
