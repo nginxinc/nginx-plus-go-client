@@ -17,6 +17,7 @@ const (
 )
 
 var defaultMaxFails = 1
+var defaultWeight = 1
 
 func TestStreamClient(t *testing.T) {
 	httpClient := &http.Client{}
@@ -171,12 +172,17 @@ func TestStreamUpstreamServer(t *testing.T) {
 	}
 
 	maxFails := 64
+	weight := 10
+
 	streamServer := client.StreamUpstreamServer{
 		Server:      "127.0.0.1:2000",
 		MaxConns:    321,
 		MaxFails:    &maxFails,
 		FailTimeout: "21s",
 		SlowStart:   "12s",
+		Weight:      &weight,
+		Backup:      true,
+		Down:        true,
 	}
 	err = c.AddStreamServer(streamUpstream, streamServer)
 	if err != nil {
@@ -363,12 +369,17 @@ func TestUpstreamServer(t *testing.T) {
 	}
 
 	maxFails := 64
+	weight := 10
 	server := client.UpstreamServer{
 		Server:      "127.0.0.1:2000",
 		MaxConns:    321,
 		MaxFails:    &maxFails,
 		FailTimeout: "21s",
 		SlowStart:   "12s",
+		Weight:      &weight,
+		Route:       "test",
+		Backup:      true,
+		Down:        true,
 	}
 	err = c.AddHTTPServer(upstream, server)
 	if err != nil {
@@ -496,6 +507,7 @@ func TestUpstreamServerDefaultParameters(t *testing.T) {
 		SlowStart:   "0s",
 		MaxFails:    &defaultMaxFails,
 		FailTimeout: "10s",
+		Weight:      &defaultWeight,
 	}
 	err = c.AddHTTPServer(upstream, server)
 	if err != nil {
@@ -608,6 +620,7 @@ func TestStreamUpstreamServerDefaultParameters(t *testing.T) {
 		SlowStart:   "0s",
 		MaxFails:    &defaultMaxFails,
 		FailTimeout: "10s",
+		Weight:      &defaultWeight,
 	}
 	err = c.AddStreamServer(streamUpstream, streamServer)
 	if err != nil {
@@ -954,4 +967,37 @@ func compareStreamUpstreamServers(x []client.StreamUpstreamServer, y []client.St
 	}
 
 	return reflect.DeepEqual(xServers, yServers)
+}
+
+func TestUpstreamServerWithDrain(t *testing.T) {
+	httpClient := &http.Client{}
+	c, err := client.NewNginxClient(httpClient, "http://127.0.0.1:8080/api")
+	if err != nil {
+		t.Fatalf("Error connecting to nginx: %v", err)
+	}
+
+	server := client.UpstreamServer{
+		Server:      "127.0.0.1:9001",
+		MaxFails:    &defaultMaxFails,
+		FailTimeout: "10s",
+		SlowStart:   "0s",
+		Weight:      &defaultWeight,
+		Drain:       true,
+	}
+
+	// Get existing upstream servers
+	servers, err := c.GetHTTPServers("test-drain")
+	if err != nil {
+		t.Fatalf("Error getting HTTPServers: %v", err)
+	}
+
+	if len(servers) != 1 {
+		t.Errorf("Too many servers")
+	}
+
+	servers[0].ID = 0
+
+	if !reflect.DeepEqual(server, servers[0]) {
+		t.Errorf("Expected: %v Got: %v", server, servers[0])
+	}
 }
