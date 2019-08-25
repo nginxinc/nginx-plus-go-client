@@ -33,6 +33,12 @@ type UpstreamServer struct {
 	MaxFails    *int   `json:"max_fails,omitempty"`
 	FailTimeout string `json:"fail_timeout,omitempty"`
 	SlowStart   string `json:"slow_start,omitempty"`
+	Route       string `json:"route"`
+	Backup      bool   `json:"backup"`
+	Down        bool   `json:"down"`
+	Drain       bool   `json:"drain,omitempty"`
+	Weight      *int   `json:"weight,omitempty"`
+	Service     string `json:"service,omitempty"`
 }
 
 // StreamUpstreamServer lets you configure Stream upstreams.
@@ -43,6 +49,10 @@ type StreamUpstreamServer struct {
 	MaxFails    *int   `json:"max_fails,omitempty"`
 	FailTimeout string `json:"fail_timeout,omitempty"`
 	SlowStart   string `json:"slow_start,omitempty"`
+	Backup      bool   `json:"backup"`
+	Down        bool   `json:"down"`
+	Weight      *int   `json:"weight,omitempty"`
+	Service     string `json:"service,omitempty"`
 }
 
 type apiErrorResponse struct {
