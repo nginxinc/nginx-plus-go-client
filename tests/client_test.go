@@ -14,6 +14,8 @@ const (
 	upstream       = "test"
 	streamUpstream = "stream_test"
 	streamZoneSync = "zone_test_sync"
+	locationZone   = "location_test"
+	resolverMetric = "resolver_test"
 )
 
 var defaultMaxFails = 1
@@ -482,6 +484,20 @@ func TestStats(t *testing.T) {
 		}
 	} else {
 		t.Errorf("Upstream 'test' not found")
+	}
+	if locZones, ok := stats.LocationZones[locationZone]; ok {
+		if locZones.Requests < 1 {
+			t.Errorf("LocationZone stats missing: %v", locZones.Requests)
+		}
+	} else {
+		t.Errorf("LocationZone %v not found", locationZone)
+	}
+	if resolver, ok := stats.Resolvers[resolverMetric]; ok {
+		if resolver.Requests.Name < 1 {
+			t.Errorf("Resolvers stats missing: %v", resolver.Requests)
+		}
+	} else {
+		t.Errorf("Resolver %v not found", resolverMetric)
 	}
 
 	// cleanup upstream servers
