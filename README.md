@@ -11,7 +11,7 @@ This project includes a client library for working with NGINX Plus API.
 
 ## Compatibility
 
-This Client works against version 4 of NGINX Plus API. Version 4 was introduced in NGINX Plus R18.
+This Client works against version 5 of NGINX Plus API. Version 5 was introduced in NGINX Plus R19.
 
 ## Using the Client
 

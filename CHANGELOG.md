@@ -1,3 +1,16 @@
+## 0.5.0 (Sep 25, 2019)
+FEATURES:
+* [30](https://github.com/nginxinc/nginx-plus-go-client/pull/30): *Support additional upstream server parameters*.
+The client now supports configuring `route`, `backup`, `down`, `drain`,  `weight` and `service` parameters for http upstreams and  `backup`, `down`,  `weight` and  `service` parameters for stream upstreams.
+* [31](https://github.com/nginxinc/nginx-plus-go-client/pull/31): *Support location zones and resolver metrics*.
+
+BUGFIXES:
+* [29](https://github.com/nginxinc/nginx-plus-go-client/pull/29): *Fix max_fails parameter in upstream servers*. Previously, if the MaxFails field was not explicitly set, the client would incorrectly configure an upstream with the value `0` instead of the correct value `1`.
+
+CHANGES:
+* The version of NGINX Plus for e2e testing was changed to R19.
+* The version of the API was changed to 5.
+
 ## 0.4.0 (July 17, 2019)
 FEATURES:
 * [24](https://github.com/nginxinc/nginx-plus-go-client/pull/24): *Support `MaxConns` in upstream servers*.
