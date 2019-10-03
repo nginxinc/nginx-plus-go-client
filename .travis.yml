@@ -1,6 +1,6 @@
 language: go
 go:
-- "1.10"
+- "1.13"
 script:
 - echo "commit:${TRAVIS_COMMIT}"
 jobs:
