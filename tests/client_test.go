@@ -19,8 +19,15 @@ const (
 	resolverMetric = "resolver_test"
 )
 
-var defaultMaxFails = 1
-var defaultWeight = 1
+var (
+	defaultMaxConns    = 0
+	defaultMaxFails    = 1
+	defaultFailTimeout = "10s"
+	defaultSlowStart   = "0s"
+	defaultBackup      = false
+	defaultDown        = false
+	defaultWeight      = 1
+)
 
 func TestStreamClient(t *testing.T) {
 	httpClient := &http.Client{}
@@ -33,6 +40,7 @@ func TestStreamClient(t *testing.T) {
 	streamServer := client.StreamUpstreamServer{
 		Server: "127.0.0.1:8001",
 	}
+
 	// test adding a stream server
 
 	err = c.AddStreamServer(streamUpstream, streamServer)
@@ -70,17 +78,17 @@ func TestStreamClient(t *testing.T) {
 	// test updating stream servers
 	streamServers1 := []client.StreamUpstreamServer{
 		{
-			Server: "127.0.0.2:8001",
+			Server: "127.0.0.1:8001",
 		},
 		{
 			Server: "127.0.0.2:8002",
 		},
 		{
-			Server: "127.0.0.2:8003",
+			Server: "127.0.0.3:8003",
 		},
 	}
 
-	streamAdded, streamDeleted, err := c.UpdateStreamServers(streamUpstream, streamServers1)
+	streamAdded, streamDeleted, streamUpdated, err := c.UpdateStreamServers(streamUpstream, streamServers1)
 
 	if err != nil {
 		t.Fatalf("Error when updating servers: %v", err)
@@ -90,6 +98,9 @@ func TestStreamClient(t *testing.T) {
 	}
 	if len(streamDeleted) != 0 {
 		t.Errorf("The number of deleted servers %v != 0", len(streamDeleted))
+	}
+	if len(streamUpdated) != 0 {
+		t.Errorf("The number of updated servers %v != 0", len(streamUpdated))
 	}
 
 	// test getting servers
@@ -104,7 +115,7 @@ func TestStreamClient(t *testing.T) {
 
 	// updating with the same servers
 
-	added, deleted, err := c.UpdateStreamServers(streamUpstream, streamServers1)
+	added, deleted, updated, err := c.UpdateStreamServers(streamUpstream, streamServers1)
 
 	if err != nil {
 		t.Fatalf("Error when updating servers: %v", err)
@@ -114,6 +125,73 @@ func TestStreamClient(t *testing.T) {
 	}
 	if len(deleted) != 0 {
 		t.Errorf("The number of deleted servers %v != 0", len(deleted))
+	}
+	if len(updated) != 0 {
+		t.Errorf("The number of updated servers %v != 0", len(updated))
+	}
+
+	// updating one server with different parameters
+	newMaxConns := 5
+	newMaxFails := 6
+	newFailTimeout := "15s"
+	newSlowStart := "10s"
+	streamServers[0].MaxConns = &newMaxConns
+	streamServers[0].MaxFails = &newMaxFails
+	streamServers[0].FailTimeout = newFailTimeout
+	streamServers[0].SlowStart = newSlowStart
+
+	// updating one server with only one different parameter
+	streamServers[1].SlowStart = newSlowStart
+
+	added, deleted, updated, err = c.UpdateStreamServers(streamUpstream, streamServers)
+	if err != nil {
+		t.Fatalf("Error when updating server with different parameters: %v", err)
+	}
+	if len(added) != 0 {
+		t.Errorf("The number of added servers %v != 0", len(added))
+	}
+	if len(deleted) != 0 {
+		t.Errorf("The number of deleted servers %v != 0", len(deleted))
+	}
+	if len(updated) != 2 {
+		t.Errorf("The number of updated servers %v != 2", len(updated))
+	}
+
+	streamServers, err = c.GetStreamServers(streamUpstream)
+	if err != nil {
+		t.Fatalf("Error when getting servers: %v", err)
+	}
+
+	for _, srv := range streamServers {
+		if srv.Server == streamServers[0].Server {
+			if *srv.MaxConns != newMaxConns {
+				t.Errorf("The parameter MaxConns of the updated server %v is != %v", *srv.MaxConns, newMaxConns)
+			}
+			if *srv.MaxFails != newMaxFails {
+				t.Errorf("The parameter MaxFails of the updated server %v is != %v", *srv.MaxFails, newMaxFails)
+			}
+			if srv.FailTimeout != newFailTimeout {
+				t.Errorf("The parameter FailTimeout of the updated server %v is != %v", srv.FailTimeout, newFailTimeout)
+			}
+			if srv.SlowStart != newSlowStart {
+				t.Errorf("The parameter SlowStart of the updated server %v is != %v", srv.SlowStart, newSlowStart)
+			}
+		}
+
+		if srv.Server == streamServers[1].Server {
+			if *srv.MaxConns != defaultMaxConns {
+				t.Errorf("The parameter MaxConns of the updated server %v is != %v", *srv.MaxConns, defaultMaxConns)
+			}
+			if *srv.MaxFails != defaultMaxFails {
+				t.Errorf("The parameter MaxFails of the updated server %v is != %v", *srv.MaxFails, defaultMaxFails)
+			}
+			if srv.FailTimeout != defaultFailTimeout {
+				t.Errorf("The parameter FailTimeout of the updated server %v is != %v", srv.FailTimeout, defaultFailTimeout)
+			}
+			if srv.SlowStart != newSlowStart {
+				t.Errorf("The parameter SlowStart of the updated server %v is != %v", srv.SlowStart, newSlowStart)
+			}
+		}
 	}
 
 	streamServers2 := []client.StreamUpstreamServer{
@@ -129,21 +207,24 @@ func TestStreamClient(t *testing.T) {
 
 	// updating with 2 new servers, 1 existing
 
-	added, deleted, err = c.UpdateStreamServers(streamUpstream, streamServers2)
+	added, deleted, updated, err = c.UpdateStreamServers(streamUpstream, streamServers2)
 
 	if err != nil {
 		t.Fatalf("Error when updating servers: %v", err)
 	}
-	if len(added) != 2 {
-		t.Errorf("The number of added servers %v != 2", len(added))
+	if len(added) != 3 {
+		t.Errorf("The number of added servers %v != 3", len(added))
 	}
-	if len(deleted) != 2 {
-		t.Errorf("The number of deleted servers %v != 2", len(deleted))
+	if len(deleted) != 3 {
+		t.Errorf("The number of deleted servers %v != 3", len(deleted))
+	}
+	if len(updated) != 0 {
+		t.Errorf("The number of updated servers %v != 0", len(updated))
 	}
 
 	// updating with zero servers - removing
 
-	added, deleted, err = c.UpdateStreamServers(streamUpstream, []client.StreamUpstreamServer{})
+	added, deleted, updated, err = c.UpdateStreamServers(streamUpstream, []client.StreamUpstreamServer{})
 
 	if err != nil {
 		t.Fatalf("Error when updating servers: %v", err)
@@ -153,6 +234,9 @@ func TestStreamClient(t *testing.T) {
 	}
 	if len(deleted) != 3 {
 		t.Errorf("The number of deleted servers %v != 3", len(deleted))
+	}
+	if len(updated) != 0 {
+		t.Errorf("The number of updated servers %v != 0", len(updated))
 	}
 
 	// test getting servers again
@@ -176,16 +260,19 @@ func TestStreamUpstreamServer(t *testing.T) {
 
 	maxFails := 64
 	weight := 10
+	maxConns := 321
+	backup := true
+	down := true
 
 	streamServer := client.StreamUpstreamServer{
 		Server:      "127.0.0.1:2000",
-		MaxConns:    321,
+		MaxConns:    &maxConns,
 		MaxFails:    &maxFails,
 		FailTimeout: "21s",
 		SlowStart:   "12s",
 		Weight:      &weight,
-		Backup:      true,
-		Down:        true,
+		Backup:      &backup,
+		Down:        &down,
 	}
 	err = c.AddStreamServer(streamUpstream, streamServer)
 	if err != nil {
@@ -206,7 +293,7 @@ func TestStreamUpstreamServer(t *testing.T) {
 	}
 
 	// remove stream upstream servers
-	_, _, err = c.UpdateStreamServers(streamUpstream, []client.StreamUpstreamServer{})
+	_, _, _, err = c.UpdateStreamServers(streamUpstream, []client.StreamUpstreamServer{})
 	if err != nil {
 		t.Errorf("Couldn't remove servers: %v", err)
 	}
@@ -275,7 +362,7 @@ func TestClient(t *testing.T) {
 		},
 	}
 
-	added, deleted, err := c.UpdateHTTPServers(upstream, servers1)
+	added, deleted, updated, err := c.UpdateHTTPServers(upstream, servers1)
 
 	if err != nil {
 		t.Fatalf("Error when updating servers: %v", err)
@@ -285,6 +372,9 @@ func TestClient(t *testing.T) {
 	}
 	if len(deleted) != 0 {
 		t.Errorf("The number of deleted servers %v != 0", len(deleted))
+	}
+	if len(updated) != 0 {
+		t.Errorf("The number of updated servers %v != 0", len(updated))
 	}
 
 	// test getting servers
@@ -301,7 +391,7 @@ func TestClient(t *testing.T) {
 
 	// updating with the same servers
 
-	added, deleted, err = c.UpdateHTTPServers(upstream, servers1)
+	added, deleted, updated, err = c.UpdateHTTPServers(upstream, servers1)
 
 	if err != nil {
 		t.Fatalf("Error when updating servers: %v", err)
@@ -312,6 +402,73 @@ func TestClient(t *testing.T) {
 	if len(deleted) != 0 {
 		t.Errorf("The number of deleted servers %v != 0", len(deleted))
 	}
+	if len(updated) != 0 {
+		t.Errorf("The number of updated servers %v != 0", len(updated))
+	}
+
+	// updating one server with different parameters
+	newMaxConns := 5
+	newMaxFails := 6
+	newFailTimeout := "15s"
+	newSlowStart := "10s"
+	servers[0].MaxConns = &newMaxConns
+	servers[0].MaxFails = &newMaxFails
+	servers[0].FailTimeout = newFailTimeout
+	servers[0].SlowStart = newSlowStart
+
+	// updating one server with only one different parameter
+	servers[1].SlowStart = newSlowStart
+
+	added, deleted, updated, err = c.UpdateHTTPServers(upstream, servers)
+	if err != nil {
+		t.Fatalf("Error when updating server with different parameters: %v", err)
+	}
+	if len(added) != 0 {
+		t.Errorf("The number of added servers %v != 0", len(added))
+	}
+	if len(deleted) != 0 {
+		t.Errorf("The number of deleted servers %v != 0", len(deleted))
+	}
+	if len(updated) != 2 {
+		t.Errorf("The number of updated servers %v != 2", len(updated))
+	}
+
+	servers, err = c.GetHTTPServers(upstream)
+	if err != nil {
+		t.Fatalf("Error when getting servers: %v", err)
+	}
+
+	for _, srv := range servers {
+		if srv.Server == servers[0].Server {
+			if *srv.MaxConns != newMaxConns {
+				t.Errorf("The parameter MaxConns of the updated server %v is != %v", *srv.MaxConns, newMaxConns)
+			}
+			if *srv.MaxFails != newMaxFails {
+				t.Errorf("The parameter MaxFails of the updated server %v is != %v", *srv.MaxFails, newMaxFails)
+			}
+			if srv.FailTimeout != newFailTimeout {
+				t.Errorf("The parameter FailTimeout of the updated server %v is != %v", srv.FailTimeout, newFailTimeout)
+			}
+			if srv.SlowStart != newSlowStart {
+				t.Errorf("The parameter SlowStart of the updated server %v is != %v", srv.SlowStart, newSlowStart)
+			}
+		}
+
+		if srv.Server == servers[1].Server {
+			if *srv.MaxConns != defaultMaxConns {
+				t.Errorf("The parameter MaxConns of the updated server %v is != %v", *srv.MaxConns, defaultMaxConns)
+			}
+			if *srv.MaxFails != defaultMaxFails {
+				t.Errorf("The parameter MaxFails of the updated server %v is != %v", *srv.MaxFails, defaultMaxFails)
+			}
+			if srv.FailTimeout != defaultFailTimeout {
+				t.Errorf("The parameter FailTimeout of the updated server %v is != %v", srv.FailTimeout, defaultFailTimeout)
+			}
+			if srv.SlowStart != newSlowStart {
+				t.Errorf("The parameter SlowStart of the updated server %v is != %v", srv.SlowStart, newSlowStart)
+			}
+		}
+	}
 
 	servers2 := []client.UpstreamServer{
 		{
@@ -319,14 +476,15 @@ func TestClient(t *testing.T) {
 		},
 		{
 			Server: "127.0.0.2:8004",
-		}, {
+		},
+		{
 			Server: "127.0.0.2:8005",
 		},
 	}
 
 	// updating with 2 new servers, 1 existing
 
-	added, deleted, err = c.UpdateHTTPServers(upstream, servers2)
+	added, deleted, updated, err = c.UpdateHTTPServers(upstream, servers2)
 
 	if err != nil {
 		t.Fatalf("Error when updating servers: %v", err)
@@ -337,10 +495,13 @@ func TestClient(t *testing.T) {
 	if len(deleted) != 2 {
 		t.Errorf("The number of deleted servers %v != 2", len(deleted))
 	}
+	if len(updated) != 0 {
+		t.Errorf("The number of updated servers %v != 0", len(updated))
+	}
 
 	// updating with zero servers - removing
 
-	added, deleted, err = c.UpdateHTTPServers(upstream, []client.UpstreamServer{})
+	added, deleted, updated, err = c.UpdateHTTPServers(upstream, []client.UpstreamServer{})
 
 	if err != nil {
 		t.Fatalf("Error when updating servers: %v", err)
@@ -350,6 +511,9 @@ func TestClient(t *testing.T) {
 	}
 	if len(deleted) != 3 {
 		t.Errorf("The number of deleted servers %v != 3", len(deleted))
+	}
+	if len(updated) != 0 {
+		t.Errorf("The number of updated servers %v != 0", len(updated))
 	}
 
 	// test getting servers again
@@ -373,16 +537,20 @@ func TestUpstreamServer(t *testing.T) {
 
 	maxFails := 64
 	weight := 10
+	maxConns := 321
+	backup := true
+	down := true
+
 	server := client.UpstreamServer{
 		Server:      "127.0.0.1:2000",
-		MaxConns:    321,
+		MaxConns:    &maxConns,
 		MaxFails:    &maxFails,
 		FailTimeout: "21s",
 		SlowStart:   "12s",
 		Weight:      &weight,
 		Route:       "test",
-		Backup:      true,
-		Down:        true,
+		Backup:      &backup,
+		Down:        &down,
 	}
 	err = c.AddHTTPServer(upstream, server)
 	if err != nil {
@@ -403,7 +571,7 @@ func TestUpstreamServer(t *testing.T) {
 	}
 
 	// remove upstream servers
-	_, _, err = c.UpdateHTTPServers(upstream, []client.UpstreamServer{})
+	_, _, _, err = c.UpdateHTTPServers(upstream, []client.UpstreamServer{})
 	if err != nil {
 		t.Errorf("Couldn't remove servers: %v", err)
 	}
@@ -502,7 +670,7 @@ func TestStats(t *testing.T) {
 	}
 
 	// cleanup upstream servers
-	_, _, err = c.UpdateHTTPServers(upstream, []client.UpstreamServer{})
+	_, _, _, err = c.UpdateHTTPServers(upstream, []client.UpstreamServer{})
 	if err != nil {
 		t.Errorf("Couldn't remove servers: %v", err)
 	}
@@ -520,11 +688,18 @@ func TestUpstreamServerDefaultParameters(t *testing.T) {
 	}
 
 	expected := client.UpstreamServer{
+		ID:          0,
 		Server:      "127.0.0.1:2000",
-		SlowStart:   "0s",
+		MaxConns:    &defaultMaxConns,
 		MaxFails:    &defaultMaxFails,
-		FailTimeout: "10s",
+		FailTimeout: defaultFailTimeout,
+		SlowStart:   defaultSlowStart,
+		Route:       "",
+		Backup:      &defaultBackup,
+		Down:        &defaultDown,
+		Drain:       false,
 		Weight:      &defaultWeight,
+		Service:     "",
 	}
 	err = c.AddHTTPServer(upstream, server)
 	if err != nil {
@@ -545,7 +720,7 @@ func TestUpstreamServerDefaultParameters(t *testing.T) {
 	}
 
 	// remove upstream servers
-	_, _, err = c.UpdateHTTPServers(upstream, []client.UpstreamServer{})
+	_, _, _, err = c.UpdateHTTPServers(upstream, []client.UpstreamServer{})
 	if err != nil {
 		t.Errorf("Couldn't remove servers: %v", err)
 	}
@@ -615,7 +790,7 @@ func TestStreamStats(t *testing.T) {
 	}
 
 	// cleanup stream upstream servers
-	_, _, err = c.UpdateStreamServers(streamUpstream, []client.StreamUpstreamServer{})
+	_, _, _, err = c.UpdateStreamServers(streamUpstream, []client.StreamUpstreamServer{})
 	if err != nil {
 		t.Errorf("Couldn't remove stream servers: %v", err)
 	}
@@ -633,11 +808,16 @@ func TestStreamUpstreamServerDefaultParameters(t *testing.T) {
 	}
 
 	expected := client.StreamUpstreamServer{
+		ID:          0,
 		Server:      "127.0.0.1:2000",
-		SlowStart:   "0s",
+		MaxConns:    &defaultMaxConns,
 		MaxFails:    &defaultMaxFails,
-		FailTimeout: "10s",
+		FailTimeout: defaultFailTimeout,
+		SlowStart:   defaultSlowStart,
+		Backup:      &defaultBackup,
+		Down:        &defaultDown,
 		Weight:      &defaultWeight,
+		Service:     "",
 	}
 	err = c.AddStreamServer(streamUpstream, streamServer)
 	if err != nil {
@@ -658,7 +838,7 @@ func TestStreamUpstreamServerDefaultParameters(t *testing.T) {
 	}
 
 	// cleanup stream upstream servers
-	_, _, err = c.UpdateStreamServers(streamUpstream, []client.StreamUpstreamServer{})
+	_, _, _, err = c.UpdateStreamServers(streamUpstream, []client.StreamUpstreamServer{})
 	if err != nil {
 		t.Errorf("Couldn't remove stream servers: %v", err)
 	}
@@ -994,12 +1174,18 @@ func TestUpstreamServerWithDrain(t *testing.T) {
 	}
 
 	server := client.UpstreamServer{
+		ID:          0,
 		Server:      "127.0.0.1:9001",
+		MaxConns:    &defaultMaxConns,
 		MaxFails:    &defaultMaxFails,
-		FailTimeout: "10s",
-		SlowStart:   "0s",
-		Weight:      &defaultWeight,
+		FailTimeout: defaultFailTimeout,
+		SlowStart:   defaultSlowStart,
+		Route:       "",
+		Backup:      &defaultBackup,
+		Down:        &defaultDown,
 		Drain:       true,
+		Weight:      &defaultWeight,
+		Service:     "",
 	}
 
 	// Get existing upstream servers
