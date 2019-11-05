@@ -567,7 +567,7 @@ func TestStreamStats(t *testing.T) {
 	}
 
 	// make connection so we have stream server zone stats - ignore response
-	_, err = net.Dial("tcp", "127.0.0.1:8081")
+	_, err = net.Dial("tcp", getStreamAddress())
 	if err != nil {
 		t.Errorf("Error making tcp connection: %v", err)
 	}
@@ -866,7 +866,7 @@ func TestStreamZoneSync(t *testing.T) {
 		t.Fatalf("Error connecting to nginx: %v", err)
 	}
 
-	c2, err := client.NewNginxClient(&http.Client{}, getAPIEndpointTwo())
+	c2, err := client.NewNginxClient(&http.Client{}, getStreamAPIEndpoint())
 	if err != nil {
 		t.Fatalf("Error connecting to nginx: %v", err)
 	}
@@ -1027,8 +1027,16 @@ func getAPIEndpoint() string {
 	return "http://127.0.0.1:8080/api"
 }
 
-func getAPIEndpointTwo() string {
-	ep := os.Getenv("NGINX_TEST_ENDPOINT_TWO")
+func getStreamAddress() string {
+	addr := os.Getenv("NGINX_TEST_STREAM_ADDRESS")
+	if addr != "" {
+		return addr
+	}
+	return "127.0.0.1:8081"
+}
+
+func getStreamAPIEndpoint() string {
+	ep := os.Getenv("NGINX_TEST_STREAM_ENDPOINT")
 	if ep != "" {
 		return ep
 	}

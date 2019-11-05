@@ -2,6 +2,7 @@ package tests
 
 import (
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/nginxinc/nginx-plus-go-client/client"
@@ -13,7 +14,7 @@ import (
 // is misconfigured or of the stream block is missing.
 func TestStatsNoStream(t *testing.T) {
 	httpClient := &http.Client{}
-	c, err := client.NewNginxClient(httpClient, "http://127.0.0.1:8080/api")
+	c, err := client.NewNginxClient(httpClient, getTestEndpoint())
 	if err != nil {
 		t.Fatalf("Error connecting to nginx: %v", err)
 	}
@@ -38,4 +39,12 @@ func TestStatsNoStream(t *testing.T) {
 	if stats.StreamZoneSync != nil {
 		t.Error("No stream block should result in StreamZoneSync = `nil`")
 	}
+}
+
+func getTestEndpoint() string {
+	ep := os.Getenv("NGINX_TEST_ENDPOINT")
+	if ep != "" {
+		return ep
+	}
+	return "http://127.0.0.1:8080/api"
 }
