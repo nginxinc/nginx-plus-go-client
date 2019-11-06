@@ -3,12 +3,12 @@ package tests
 import (
 	"net"
 	"net/http"
-	"os"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/nginxinc/nginx-plus-go-client/client"
+	"github.com/nginxinc/nginx-plus-go-client/tests/helpers"
 )
 
 const (
@@ -24,7 +24,7 @@ var defaultWeight = 1
 
 func TestStreamClient(t *testing.T) {
 	httpClient := &http.Client{}
-	c, err := client.NewNginxClient(httpClient, getAPIEndpoint())
+	c, err := client.NewNginxClient(httpClient, helpers.GetAPIEndpoint())
 
 	if err != nil {
 		t.Fatalf("Error when creating a client: %v", err)
@@ -169,7 +169,7 @@ func TestStreamClient(t *testing.T) {
 
 func TestStreamUpstreamServer(t *testing.T) {
 	httpClient := &http.Client{}
-	c, err := client.NewNginxClient(httpClient, getAPIEndpoint())
+	c, err := client.NewNginxClient(httpClient, helpers.GetAPIEndpoint())
 	if err != nil {
 		t.Fatalf("Error connecting to nginx: %v", err)
 	}
@@ -214,7 +214,7 @@ func TestStreamUpstreamServer(t *testing.T) {
 
 func TestClient(t *testing.T) {
 	httpClient := &http.Client{}
-	c, err := client.NewNginxClient(httpClient, getAPIEndpoint())
+	c, err := client.NewNginxClient(httpClient, helpers.GetAPIEndpoint())
 
 	if err != nil {
 		t.Fatalf("Error when creating a client: %v", err)
@@ -366,7 +366,7 @@ func TestClient(t *testing.T) {
 
 func TestUpstreamServer(t *testing.T) {
 	httpClient := &http.Client{}
-	c, err := client.NewNginxClient(httpClient, getAPIEndpoint())
+	c, err := client.NewNginxClient(httpClient, helpers.GetAPIEndpoint())
 	if err != nil {
 		t.Fatalf("Error connecting to nginx: %v", err)
 	}
@@ -411,7 +411,7 @@ func TestUpstreamServer(t *testing.T) {
 
 func TestStats(t *testing.T) {
 	httpClient := &http.Client{}
-	c, err := client.NewNginxClient(httpClient, getAPIEndpoint())
+	c, err := client.NewNginxClient(httpClient, helpers.GetAPIEndpoint())
 	if err != nil {
 		t.Fatalf("Error connecting to nginx: %v", err)
 	}
@@ -510,7 +510,7 @@ func TestStats(t *testing.T) {
 
 func TestUpstreamServerDefaultParameters(t *testing.T) {
 	httpClient := &http.Client{}
-	c, err := client.NewNginxClient(httpClient, getAPIEndpoint())
+	c, err := client.NewNginxClient(httpClient, helpers.GetAPIEndpoint())
 	if err != nil {
 		t.Fatalf("Error connecting to nginx: %v", err)
 	}
@@ -553,7 +553,7 @@ func TestUpstreamServerDefaultParameters(t *testing.T) {
 
 func TestStreamStats(t *testing.T) {
 	httpClient := &http.Client{}
-	c, err := client.NewNginxClient(httpClient, getAPIEndpoint())
+	c, err := client.NewNginxClient(httpClient, helpers.GetAPIEndpoint())
 	if err != nil {
 		t.Fatalf("Error connecting to nginx: %v", err)
 	}
@@ -567,7 +567,7 @@ func TestStreamStats(t *testing.T) {
 	}
 
 	// make connection so we have stream server zone stats - ignore response
-	_, err = net.Dial("tcp", getStreamAddress())
+	_, err = net.Dial("tcp", helpers.GetStreamAddress())
 	if err != nil {
 		t.Errorf("Error making tcp connection: %v", err)
 	}
@@ -623,7 +623,7 @@ func TestStreamStats(t *testing.T) {
 
 func TestStreamUpstreamServerDefaultParameters(t *testing.T) {
 	httpClient := &http.Client{}
-	c, err := client.NewNginxClient(httpClient, getAPIEndpoint())
+	c, err := client.NewNginxClient(httpClient, helpers.GetAPIEndpoint())
 	if err != nil {
 		t.Fatalf("Error connecting to nginx: %v", err)
 	}
@@ -667,7 +667,7 @@ func TestStreamUpstreamServerDefaultParameters(t *testing.T) {
 func TestKeyValue(t *testing.T) {
 	zoneName := "zone_one"
 	httpClient := &http.Client{}
-	c, err := client.NewNginxClient(httpClient, getAPIEndpoint())
+	c, err := client.NewNginxClient(httpClient, helpers.GetAPIEndpoint())
 	if err != nil {
 		t.Fatalf("Error connecting to nginx: %v", err)
 	}
@@ -765,7 +765,7 @@ func TestKeyValue(t *testing.T) {
 func TestKeyValueStream(t *testing.T) {
 	zoneName := "zone_one_stream"
 	httpClient := &http.Client{}
-	c, err := client.NewNginxClient(httpClient, getAPIEndpoint())
+	c, err := client.NewNginxClient(httpClient, helpers.GetAPIEndpoint())
 	if err != nil {
 		t.Fatalf("Error connecting to nginx: %v", err)
 	}
@@ -861,12 +861,12 @@ func TestKeyValueStream(t *testing.T) {
 }
 
 func TestStreamZoneSync(t *testing.T) {
-	c1, err := client.NewNginxClient(&http.Client{}, getAPIEndpoint())
+	c1, err := client.NewNginxClient(&http.Client{}, helpers.GetAPIEndpoint())
 	if err != nil {
 		t.Fatalf("Error connecting to nginx: %v", err)
 	}
 
-	c2, err := client.NewNginxClient(&http.Client{}, getStreamAPIEndpoint())
+	c2, err := client.NewNginxClient(&http.Client{}, helpers.GetAPIEndpointOfHelper())
 	if err != nil {
 		t.Fatalf("Error connecting to nginx: %v", err)
 	}
@@ -988,7 +988,7 @@ func compareStreamUpstreamServers(x []client.StreamUpstreamServer, y []client.St
 
 func TestUpstreamServerWithDrain(t *testing.T) {
 	httpClient := &http.Client{}
-	c, err := client.NewNginxClient(httpClient, getAPIEndpoint())
+	c, err := client.NewNginxClient(httpClient, helpers.GetAPIEndpoint())
 	if err != nil {
 		t.Fatalf("Error connecting to nginx: %v", err)
 	}
@@ -1017,28 +1017,4 @@ func TestUpstreamServerWithDrain(t *testing.T) {
 	if !reflect.DeepEqual(server, servers[0]) {
 		t.Errorf("Expected: %v Got: %v", server, servers[0])
 	}
-}
-
-func getAPIEndpoint() string {
-	ep := os.Getenv("NGINX_TEST_ENDPOINT")
-	if ep != "" {
-		return ep
-	}
-	return "http://127.0.0.1:8080/api"
-}
-
-func getStreamAddress() string {
-	addr := os.Getenv("NGINX_TEST_STREAM_ADDRESS")
-	if addr != "" {
-		return addr
-	}
-	return "127.0.0.1:8081"
-}
-
-func getStreamAPIEndpoint() string {
-	ep := os.Getenv("NGINX_TEST_STREAM_ENDPOINT")
-	if ep != "" {
-		return ep
-	}
-	return "http://127.0.0.1:8090/api"
 }

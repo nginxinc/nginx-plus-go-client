@@ -1,11 +1,12 @@
 NGINX_PLUS_VERSION=19-1
 NGINX_IMAGE=nginxplus:$(NGINX_PLUS_VERSION)
-NGINX_TEST_ENDPOINT?=http://127.0.0.1:8080/api
-NGINX_TEST_STREAM_ADDRESS?=127.0.0.1:8081
-NGINX_TEST_STREAM_ENDPOINT?=http://127.0.0.1:8081/api
 DOCKER_NETWORK?=test
 DOCKER_NGINX_PLUS?=nginx-plus
 DOCKER_NGINX_PLUS_HELPER?=nginx-plus-helper
+
+export TEST_API_ENDPOINT=http://127.0.0.1:8080/api
+export TEST_API_ENDPOINT_OF_HELPER=http://127.0.0.1:8090/api
+export TEST_UNAVAILABLE_STREAM_ADDRESS=127.0.0.1:8081
 
 test: docker-build run-nginx-plus test-run configure-no-stream-block test-run-no-stream-block clean
 
