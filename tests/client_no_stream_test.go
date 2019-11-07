@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/nginxinc/nginx-plus-go-client/client"
+	"github.com/nginxinc/nginx-plus-go-client/tests/helpers"
 )
 
 // TestStatsNoStream tests the peculiar behavior of getting Stream-related
@@ -13,7 +14,7 @@ import (
 // is misconfigured or of the stream block is missing.
 func TestStatsNoStream(t *testing.T) {
 	httpClient := &http.Client{}
-	c, err := client.NewNginxClient(httpClient, "http://127.0.0.1:8080/api")
+	c, err := client.NewNginxClient(httpClient, helpers.GetAPIEndpoint())
 	if err != nil {
 		t.Fatalf("Error connecting to nginx: %v", err)
 	}
