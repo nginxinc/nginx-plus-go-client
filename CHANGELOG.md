@@ -1,3 +1,12 @@
+## 0.6.0 (Nov 8, 2019)
+FEATURES:
+* [34](https://github.com/nginxinc/nginx-plus-go-client/pull/34): *Support for updating upstream servers parameters*. The client now supports updating upstream parameters of servers that already exist in NGINX Plus.
+
+CHANGES:
+* Public methods `UpdateHTTPServers` and `UpdateStreamServers` now return a third slice that includes the updated servers -- i.e. the servers that were already present in NGINX Plus but were updated with different parameters.
+* Client will assume port `80` in addresses of updated servers of `UpdateHTTPServers` and `UpdateStreamServers` if port is not explicitly set.
+* The version of Go was changed to 1.13
+
 ## 0.5.0 (Sep 25, 2019)
 FEATURES:
 * [30](https://github.com/nginxinc/nginx-plus-go-client/pull/30): *Support additional upstream server parameters*.
