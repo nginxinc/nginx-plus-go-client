@@ -626,6 +626,18 @@ func TestStats(t *testing.T) {
 	if stats.Connections.Accepted < 1 {
 		t.Errorf("Bad connections: %v", stats.Connections)
 	}
+
+	if val, ok := stats.Slabs[upstream]; ok {
+		if val.Pages.Used < 1 {
+			t.Errorf("Slabs pages stats missing: %v", val.Pages)
+		}
+		if len(val.Slots) < 1 {
+			t.Errorf("Slab slots not visible in stats: %v", val.Slots)
+		}
+	} else {
+		t.Errorf("Slab stats for upsteam '%v' not found", upstream)
+	}
+
 	if stats.HTTPRequests.Total < 1 {
 		t.Errorf("Bad HTTPRequests: %v", stats.HTTPRequests)
 	}
