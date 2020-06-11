@@ -38,10 +38,11 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: '^${{ env.GOLANG_VERSION }}'
-      - name: Import packages
+      - name: Set GOPATH
         run: |
-          go get -u github.com/nginxinc/nginx-plus-go-client/client
-          go get -u github.com/nginxinc/nginx-plus-go-client/tests/helpers
+          echo "##[set-env name=GOPATH;]$(dirname $GITHUB_WORKSPACE)"
+          echo "##[add-path]$(dirname $GITHUB_WORKSPACE)/bin"
+        shell: bash
       - name: Build & Test Client
         if: (github.event_name != 'schedule')
         run: make test
