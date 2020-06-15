@@ -8,7 +8,7 @@ on:
     branches:
       - master
   schedule:
-    - cron:  '* 4 * * *'
+    - cron:  '* 5 * * *'
 
 env:
   DOCKER_BUILDKIT: 1
@@ -34,14 +34,6 @@ jobs:
         run: |
           echo "${CRT}" | base64 --decode > docker/nginx-repo.crt
           echo "${KEY}" | base64 --decode > docker/nginx-repo.key
-      - name: Setup Go Environment
-        uses: actions/setup-go@v2
-        with:
-          go-version: '^${{ env.GOLANG_VERSION }}'
-      - name: Import packages
-        run: |
-          go get -u github.com/nginxinc/nginx-plus-go-client/client
-          go get -u github.com/nginxinc/nginx-plus-go-client/tests/helpers
       - name: Build & Test Client
         if: (github.event_name != 'schedule')
         run: make test
