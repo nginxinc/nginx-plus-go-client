@@ -1,0 +1,50 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - master
+  schedule:
+    - cron:  '* 5 * * *'
+
+env:
+  DOCKER_BUILDKIT: 1
+  DOCKER_NETWORK: ${{ github.run_id }}
+  DOCKER_NETWORK_ALIAS: nginx-plus-test
+  DOCKER_NGINX_PLUS: nginx-plus-${{ github.run_id }}
+  DOCKER_NGINX_PLUS_HELPER: nginx-plus-helper-${{ github.run_id }}
+
+jobs:
+
+  build:
+    name: Build Go Client
+    runs-on: ubuntu-18.04
+    if: (github.repository == 'nginxinc/nginx-plus-go-client')
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Fetch Certificates
+        env:
+          CRT: ${{ secrets.NGINX_CRT }}
+          KEY: ${{ secrets.NGINX_KEY }}
+        run: |
+          echo "${CRT}" | base64 --decode > docker/nginx-repo.crt
+          echo "${KEY}" | base64 --decode > docker/nginx-repo.key
+      - name: Build & Test Client
+        if: (github.event_name != 'schedule')
+        run: make test
+      - name: Switch Repository (Nightly)
+        if: (github.event_name == 'schedule')
+        run: |
+          sed -i 's|plus-pkgs|pkgs-test|g' docker/Dockerfile
+          sed -i '20,31d' docker/Dockerfile
+          sed -i 's|deb https|deb [trusted=yes] https|g' docker/Dockerfile
+          sed -i 's|nginx-plus=\${NGINX_PLUS_VERSION}|nginx-plus|g' docker/Dockerfile
+      - name: Build & Test Client (Nightly)
+        if: (github.event_name == 'schedule')
+        run: make test
+        env:
+          NGINX_PLUS_VERSION: nightly
