@@ -1,3 +1,12 @@
+## 0.7.0 (Jul 10, 2020)
+FEATURES:
+* [38](https://github.com/nginxinc/nginx-plus-go-client/pull/38): *Support for /slabs API endpoint*. The client now supports retrieving shared memory zone usage info.
+* [41](https://github.com/nginxinc/nginx-plus-go-client/pull/41): *Support for /processes API endpoint*. The client now supports retrieving processes info.
+
+CHANGES:
+* The version of NGINX Plus for e2e testing was changed to R22.
+* The version of Go was changed to 1.14
+
 ## 0.6.0 (Nov 8, 2019)
 FEATURES:
 * [34](https://github.com/nginxinc/nginx-plus-go-client/pull/34): *Support for updating upstream servers parameters*. The client now supports updating upstream parameters of servers that already exist in NGINX Plus.
