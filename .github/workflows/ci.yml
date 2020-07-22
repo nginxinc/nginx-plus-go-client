@@ -8,7 +8,7 @@ on:
     branches:
       - master
   schedule:
-    - cron:  '* 5 * * *'
+    - cron:  '0 5 * * *'
 
 env:
   DOCKER_BUILDKIT: 1
@@ -48,3 +48,20 @@ jobs:
         run: make test
         env:
           NGINX_PLUS_VERSION: nightly
+
+  job-failure:
+    name: Report Failures
+    runs-on: ubuntu-18.04
+    if: failure()
+    steps:
+      - name: Slack Notification
+        uses: rtCamp/action-slack-notify@master
+        env:
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
+          SLACK_COLOR: '#3278BD'
+          SLACK_ICON_EMOJI: ':github:'
+          SLACK_TITLE: Pipeline Failure
+          SLACK_MESSAGE: 'The pipeline has failed, please check the logs.'
+          SLACK_FOOTER: 'https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+          SLACK_USERNAME: GitHub-Actions
+          SLACK_WEBHOOK: ${{ secrets.SLACK_HOOK }}
