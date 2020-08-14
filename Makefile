@@ -5,7 +5,7 @@ DOCKER_NETWORK_ALIAS=nginx-plus-test
 DOCKER_NGINX_PLUS?=nginx-plus
 DOCKER_NGINX_PLUS_HELPER?=nginx-plus-helper
 
-GOLANG_CONTAINER=golang:1.14
+GOLANG_CONTAINER=golang:1.15
 GOLANGCI_CONTAINER=golangci/golangci-lint:v1.27-alpine
 
 export TEST_API_ENDPOINT=http://$(DOCKER_NGINX_PLUS):8080/api
