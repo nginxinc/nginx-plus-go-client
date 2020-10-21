@@ -34,4 +34,4 @@ jobs:
         uses: golangci/golangci-lint-action@v2
         with:
           version: 'v${{ env.GOLANGCI_VERSION }}'
-          args: --timeout ${{ env.GOLANGCI_TIMEOUT }}
+          args: --timeout ${{ env.GOLANGCI_TIMEOUT }} --issues-exit-code=0 ./client/...
