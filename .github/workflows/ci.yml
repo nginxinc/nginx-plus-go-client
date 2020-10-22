@@ -4,9 +4,15 @@ on:
   push:
     branches:
       - master
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
   pull_request:
     branches:
       - master
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
   schedule:
     - cron:  '0 5 * * *'
 
@@ -20,9 +26,11 @@ env:
 jobs:
 
   build:
-    name: Build Go Client
+    name: Build Client
     runs-on: ubuntu-18.04
-    if: (github.repository == 'nginxinc/nginx-plus-go-client')
+    if: 
+      github.event.pull_request.head.repo.full_name == 'nginxinc/nginx-plus-go-client' ||
+      github.event_name == 'push'
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
