@@ -9,7 +9,7 @@ updates:
       - "ciarams87"
       - "sundaram1995"
   - package-ecosystem: "docker"
-    directory: "/build"
+    directory: "/docker"
     schedule:
       interval: daily
     reviewers:
