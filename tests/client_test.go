@@ -12,6 +12,7 @@ import (
 )
 
 const (
+	cacheZone      = "http_cache"
 	upstream       = "test"
 	streamUpstream = "stream_test"
 	streamZoneSync = "zone_test_sync"
@@ -625,6 +626,14 @@ func TestStats(t *testing.T) {
 
 	if stats.Connections.Accepted < 1 {
 		t.Errorf("Bad connections: %v", stats.Connections)
+	}
+
+	if val, ok := stats.Caches[cacheZone]; ok {
+		if val.MaxSize != 104857600 { // 100MiB
+			t.Errorf("Cache max size stats missing: %v", val.Size)
+		}
+	} else {
+		t.Errorf("Cache stats for cache zone '%v' not found", cacheZone)
 	}
 
 	if val, ok := stats.Slabs[upstream]; ok {
