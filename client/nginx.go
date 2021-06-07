@@ -115,6 +115,7 @@ func (internalError *internalError) Wrap(err string) *internalError {
 // https://nginx.org/en/docs/http/ngx_http_api_module.html
 type Stats struct {
 	NginxInfo         NginxInfo
+	Caches            Caches
 	Processes         Processes
 	Connections       Connections
 	Slabs             Slabs
@@ -139,6 +140,36 @@ type NginxInfo struct {
 	Timestamp       string
 	ProcessID       uint64 `json:"pid"`
 	ParentProcessID uint64 `json:"ppid"`
+}
+
+// Caches is a map of cache stats by cache zone
+type Caches = map[string]HTTPCache
+
+// HTTPCache represents a zone's HTTP Cache
+type HTTPCache struct {
+	Size        uint64
+	MaxSize     uint64 `json:"max_size"`
+	Cold        bool
+	Hit         CacheStats
+	Stale       CacheStats
+	Updating    CacheStats
+	Revalidated CacheStats
+	Miss        CacheStats
+	Expired     ExtendedCacheStats
+	Bypass      ExtendedCacheStats
+}
+
+// CacheStats are basic cache stats.
+type CacheStats struct {
+	Responses uint64
+	Bytes     uint64
+}
+
+// ExtendedCacheStats are extended cache stats.
+type ExtendedCacheStats struct {
+	CacheStats
+	ResponsesWritten uint64 `json:"responses_written"`
+	BytesWritten     uint64 `json:"bytes_written"`
 }
 
 // Connections represents connection related stats.
@@ -965,6 +996,11 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 		return nil, fmt.Errorf("failed to get stats: %v", err)
 	}
 
+	caches, err := client.GetCaches()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get stats: %v", err)
+	}
+
 	processes, err := client.GetProcesses()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get stats: %v", err)
@@ -1027,6 +1063,7 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 
 	return &Stats{
 		NginxInfo:         *info,
+		Caches:            *caches,
 		Processes:         *processes,
 		Slabs:             *slabs,
 		Connections:       *cons,
@@ -1050,6 +1087,16 @@ func (client *NginxClient) GetNginxInfo() (*NginxInfo, error) {
 		return nil, fmt.Errorf("failed to get info: %v", err)
 	}
 	return &info, nil
+}
+
+// GetCaches returns Cache stats
+func (client *NginxClient) GetCaches() (*Caches, error) {
+	var caches Caches
+	err := client.get("http/caches", &caches)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get caches: %v", err)
+	}
+	return &caches, nil
 }
 
 // GetSlabs returns Slabs stats.
