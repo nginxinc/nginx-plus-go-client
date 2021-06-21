@@ -1,4 +1,4 @@
-NGINX_PLUS_VERSION=23-1
+NGINX_PLUS_VERSION=r24
 NGINX_IMAGE=nginxplus:$(NGINX_PLUS_VERSION)
 DOCKER_NETWORK?=test
 DOCKER_NETWORK_ALIAS=nginx-plus-test
@@ -6,7 +6,7 @@ DOCKER_NGINX_PLUS?=nginx-plus
 DOCKER_NGINX_PLUS_HELPER?=nginx-plus-helper
 
 GOLANG_CONTAINER=golang:1.16
-GOLANGCI_CONTAINER=golangci/golangci-lint:v1.38-alpine
+GOLANGCI_CONTAINER=golangci/golangci-lint:latest
 
 export TEST_API_ENDPOINT=http://$(DOCKER_NGINX_PLUS):8080/api
 export TEST_API_ENDPOINT_OF_HELPER=http://$(DOCKER_NGINX_PLUS_HELPER):8080/api
@@ -21,7 +21,7 @@ lint:
 	$(GOLANGCI_CONTAINER) golangci-lint run
 
 docker-build:
-	docker build --build-arg NGINX_PLUS_VERSION=$(NGINX_PLUS_VERSION)~stretch -t $(NGINX_IMAGE) docker
+	docker build --secret id=nginx-repo.crt,src=nginx-repo.crt --secret id=nginx-repo.key,src=nginx-repo.key --build-arg NGINX_PLUS_VERSION=$(NGINX_PLUS_VERSION) -t $(NGINX_IMAGE) docker
 
 run-nginx-plus:
 	docker network create --driver bridge $(DOCKER_NETWORK)
