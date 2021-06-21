@@ -16,6 +16,8 @@ categories:
   - title: '🔨 Maintenance'
     labels:
       - "chore"
+  - title: '⬆️ Dependencies'
+    labels:
       - "dependencies"
 version-resolver:
   major:
@@ -53,11 +55,12 @@ autolabeler:
       - '/enhancement\/.+/'
       - '/feat\/.+/'
       - '/feature\/.+/'
+    title:
+      - '/feat/i'
   - label: 'dependencies'
     files:
       - 'go.mod'
       - 'go.sum'
-      - 'vendor*'
     branch:
       - '/deps\/.+/'
 template: |

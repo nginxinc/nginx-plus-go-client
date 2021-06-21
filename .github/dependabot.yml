@@ -3,13 +3,12 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: weekly
+      interval: daily
     reviewers:
       - "nginxinc/kic"
-      - "ciarams87"
   - package-ecosystem: "docker"
     directory: "/docker"
     schedule:
-      interval: weekly
+      interval: daily
     reviewers:
       - "nginxinc/kic"

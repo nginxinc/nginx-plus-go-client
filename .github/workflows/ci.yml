@@ -27,8 +27,8 @@ jobs:
 
   build:
     name: Build Client
-    runs-on: ubuntu-18.04
-    if: 
+    runs-on: ubuntu-20.04
+    if:
       github.event.pull_request.head.repo.full_name == 'nginxinc/nginx-plus-go-client' ||
       github.event_name == 'push'
     steps:
@@ -59,7 +59,7 @@ jobs:
 
   notify:
     name: Notify
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     needs: build
     if: always() && github.ref == 'refs/heads/master'
     steps:
@@ -73,8 +73,8 @@ jobs:
           echo "::set-output name=repo::$(echo ${GITHUB_REPOSITORY} | cut -d '/' -f 2)"
       - name: Send Notification
         uses: 8398a7/action-slack@v3
-        if: 
-          steps.check.outputs.status == 'failure' || 
+        if:
+          steps.check.outputs.status == 'failure' ||
           steps.check.outputs.status == 'cancelled'
         with:
           status: custom
