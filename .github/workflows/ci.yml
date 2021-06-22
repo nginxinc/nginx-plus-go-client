@@ -47,10 +47,10 @@ jobs:
       - name: Switch Repository (Nightly)
         if: (github.event_name == 'schedule')
         run: |
-          sed -i 's|plus-pkgs|pkgs-test|g' docker/Dockerfile
-          sed -i '20,31d' docker/Dockerfile
+          sed -i 's|pkgs.nginx.com|pkgs-test.nginx.com|g' docker/Dockerfile
+          sed -i '15d' docker/Dockerfile
           sed -i 's|deb https|deb [trusted=yes] https|g' docker/Dockerfile
-          sed -i 's|nginx-plus=\${NGINX_PLUS_VERSION}|nginx-plus|g' docker/Dockerfile
+          sed -i 's|nginx-plus-\${NGINX_PLUS_VERSION}|nginx-plus|g' docker/Dockerfile
       - name: Build & Test Client (Nightly)
         if: (github.event_name == 'schedule')
         run: make test

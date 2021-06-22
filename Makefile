@@ -21,7 +21,7 @@ lint:
 	$(GOLANGCI_CONTAINER) golangci-lint run
 
 docker-build:
-	docker build --secret id=nginx-repo.crt,src=nginx-repo.crt --secret id=nginx-repo.key,src=nginx-repo.key --build-arg NGINX_PLUS_VERSION=$(NGINX_PLUS_VERSION) -t $(NGINX_IMAGE) docker
+	docker build --secret id=nginx-repo.crt,src=docker/nginx-repo.crt --secret id=nginx-repo.key,src=docker/nginx-repo.key --build-arg NGINX_PLUS_VERSION=$(NGINX_PLUS_VERSION) -t $(NGINX_IMAGE) docker
 
 run-nginx-plus:
 	docker network create --driver bridge $(DOCKER_NETWORK)

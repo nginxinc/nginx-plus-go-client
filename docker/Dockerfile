@@ -7,6 +7,7 @@ ARG NGINX_PLUS_VERSION
 # Install NGINX Plus
 # Download certificate and key from the customer portal (https://my.f5.com)
 # and copy to the build context
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN --mount=type=secret,id=nginx-repo.crt,dst=/etc/ssl/nginx/nginx-repo.crt,mode=0644 \
     --mount=type=secret,id=nginx-repo.key,dst=/etc/ssl/nginx/nginx-repo.key,mode=0644 \
     apt-get update \
