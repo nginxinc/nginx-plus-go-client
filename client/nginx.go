@@ -428,7 +428,7 @@ func NewNginxClientWithVersion(httpClient *http.Client, apiEndpoint string, vers
 	}
 	versions, err := getAPIVersions(httpClient, apiEndpoint)
 	if err != nil {
-		return nil, fmt.Errorf("error accessing the API: %v", err)
+		return nil, fmt.Errorf("error accessing the API: %w", err)
 	}
 	found := false
 	for _, v := range *versions {
@@ -459,7 +459,7 @@ func versionSupported(n int) bool {
 func getAPIVersions(httpClient *http.Client, endpoint string) (*versions, error) {
 	resp, err := httpClient.Get(endpoint)
 	if err != nil {
-		return nil, fmt.Errorf("%v is not accessible: %v", endpoint, err)
+		return nil, fmt.Errorf("%v is not accessible: %w", endpoint, err)
 	}
 	defer resp.Body.Close()
 
@@ -469,13 +469,13 @@ func getAPIVersions(httpClient *http.Client, endpoint string) (*versions, error)
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("error while reading body of the response: %v", err)
+		return nil, fmt.Errorf("error while reading body of the response: %w", err)
 	}
 
 	var vers versions
 	err = json.Unmarshal(body, &vers)
 	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling versions, got %q response: %v", string(body), err)
+		return nil, fmt.Errorf("error unmarshalling versions, got %q response: %w", string(body), err)
 	}
 
 	return &vers, nil
@@ -498,13 +498,13 @@ func createResponseMismatchError(respBody io.ReadCloser) *internalError {
 func readAPIErrorResponse(respBody io.ReadCloser) (*apiErrorResponse, error) {
 	body, err := ioutil.ReadAll(respBody)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read the response body: %v", err)
+		return nil, fmt.Errorf("failed to read the response body: %w", err)
 	}
 
 	var apiErr apiErrorResponse
 	err = json.Unmarshal(body, &apiErr)
 	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling apiErrorResponse: got %q response: %v", string(body), err)
+		return nil, fmt.Errorf("error unmarshalling apiErrorResponse: got %q response: %w", string(body), err)
 	}
 
 	return &apiErr, nil
@@ -523,7 +523,7 @@ func (client *NginxClient) GetHTTPServers(upstream string) ([]UpstreamServer, er
 	var servers []UpstreamServer
 	err := client.get(path, &servers)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get the HTTP servers of upstream %v: %v", upstream, err)
+		return nil, fmt.Errorf("failed to get the HTTP servers of upstream %v: %w", upstream, err)
 	}
 
 	return servers, nil
@@ -533,7 +533,7 @@ func (client *NginxClient) GetHTTPServers(upstream string) ([]UpstreamServer, er
 func (client *NginxClient) AddHTTPServer(upstream string, server UpstreamServer) error {
 	id, err := client.getIDOfHTTPServer(upstream, server.Server)
 	if err != nil {
-		return fmt.Errorf("failed to add %v server to %v upstream: %v", server.Server, upstream, err)
+		return fmt.Errorf("failed to add %v server to %v upstream: %w", server.Server, upstream, err)
 	}
 	if id != -1 {
 		return fmt.Errorf("failed to add %v server to %v upstream: server already exists", server.Server, upstream)
@@ -542,7 +542,7 @@ func (client *NginxClient) AddHTTPServer(upstream string, server UpstreamServer)
 	path := fmt.Sprintf("http/upstreams/%v/servers/", upstream)
 	err = client.post(path, &server)
 	if err != nil {
-		return fmt.Errorf("failed to add %v server to %v upstream: %v", server.Server, upstream, err)
+		return fmt.Errorf("failed to add %v server to %v upstream: %w", server.Server, upstream, err)
 	}
 
 	return nil
@@ -552,7 +552,7 @@ func (client *NginxClient) AddHTTPServer(upstream string, server UpstreamServer)
 func (client *NginxClient) DeleteHTTPServer(upstream string, server string) error {
 	id, err := client.getIDOfHTTPServer(upstream, server)
 	if err != nil {
-		return fmt.Errorf("failed to remove %v server from  %v upstream: %v", server, upstream, err)
+		return fmt.Errorf("failed to remove %v server from  %v upstream: %w", server, upstream, err)
 	}
 	if id == -1 {
 		return fmt.Errorf("failed to remove %v server from %v upstream: server doesn't exist", server, upstream)
@@ -561,7 +561,7 @@ func (client *NginxClient) DeleteHTTPServer(upstream string, server string) erro
 	path := fmt.Sprintf("http/upstreams/%v/servers/%v", upstream, id)
 	err = client.delete(path, http.StatusOK)
 	if err != nil {
-		return fmt.Errorf("failed to remove %v server from %v upstream: %v", server, upstream, err)
+		return fmt.Errorf("failed to remove %v server from %v upstream: %w", server, upstream, err)
 	}
 
 	return nil
@@ -574,7 +574,7 @@ func (client *NginxClient) DeleteHTTPServer(upstream string, server string) erro
 func (client *NginxClient) UpdateHTTPServers(upstream string, servers []UpstreamServer) (added []UpstreamServer, deleted []UpstreamServer, updated []UpstreamServer, err error) {
 	serversInNginx, err := client.GetHTTPServers(upstream)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to update servers of %v upstream: %v", upstream, err)
+		return nil, nil, nil, fmt.Errorf("failed to update servers of %v upstream: %w", upstream, err)
 	}
 
 	// We assume port 80 if no port is set for servers.
@@ -589,21 +589,21 @@ func (client *NginxClient) UpdateHTTPServers(upstream string, servers []Upstream
 	for _, server := range toAdd {
 		err := client.AddHTTPServer(upstream, server)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to update servers of %v upstream: %v", upstream, err)
+			return nil, nil, nil, fmt.Errorf("failed to update servers of %v upstream: %w", upstream, err)
 		}
 	}
 
 	for _, server := range toDelete {
 		err := client.DeleteHTTPServer(upstream, server.Server)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to update servers of %v upstream: %v", upstream, err)
+			return nil, nil, nil, fmt.Errorf("failed to update servers of %v upstream: %w", upstream, err)
 		}
 	}
 
 	for _, server := range toUpdate {
 		err := client.UpdateHTTPServer(upstream, server)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to update servers of %v upstream: %v", upstream, err)
+			return nil, nil, nil, fmt.Errorf("failed to update servers of %v upstream: %w", upstream, err)
 		}
 	}
 
@@ -692,7 +692,7 @@ func determineUpdates(updatedServers []UpstreamServer, nginxServers []UpstreamSe
 func (client *NginxClient) getIDOfHTTPServer(upstream string, name string) (int, error) {
 	servers, err := client.GetHTTPServers(upstream)
 	if err != nil {
-		return -1, fmt.Errorf("error getting id of server %v of upstream %v: %v", name, upstream, err)
+		return -1, fmt.Errorf("error getting id of server %v of upstream %v: %w", name, upstream, err)
 	}
 
 	for _, s := range servers {
@@ -708,7 +708,7 @@ func (client *NginxClient) get(path string, data interface{}) error {
 	url := fmt.Sprintf("%v/%v/%v", client.apiEndpoint, client.version, path)
 	resp, err := client.httpClient.Get(url)
 	if err != nil {
-		return fmt.Errorf("failed to get %v: %v", path, err)
+		return fmt.Errorf("failed to get %v: %w", path, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
@@ -719,12 +719,12 @@ func (client *NginxClient) get(path string, data interface{}) error {
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("failed to read the response body: %v", err)
+		return fmt.Errorf("failed to read the response body: %w", err)
 	}
 
 	err = json.Unmarshal(body, data)
 	if err != nil {
-		return fmt.Errorf("error unmarshaling response %q: %v", string(body), err)
+		return fmt.Errorf("error unmarshaling response %q: %w", string(body), err)
 	}
 	return nil
 }
@@ -734,12 +734,12 @@ func (client *NginxClient) post(path string, input interface{}) error {
 
 	jsonInput, err := json.Marshal(input)
 	if err != nil {
-		return fmt.Errorf("failed to marshall input: %v", err)
+		return fmt.Errorf("failed to marshall input: %w", err)
 	}
 
 	resp, err := client.httpClient.Post(url, "application/json", bytes.NewBuffer(jsonInput))
 	if err != nil {
-		return fmt.Errorf("failed to post %v: %v", path, err)
+		return fmt.Errorf("failed to post %v: %w", path, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
@@ -756,12 +756,12 @@ func (client *NginxClient) delete(path string, expectedStatusCode int) error {
 
 	req, err := http.NewRequest(http.MethodDelete, path, nil)
 	if err != nil {
-		return fmt.Errorf("failed to create a delete request: %v", err)
+		return fmt.Errorf("failed to create a delete request: %w", err)
 	}
 
 	resp, err := client.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to create delete request: %v", err)
+		return fmt.Errorf("failed to create delete request: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -778,17 +778,17 @@ func (client *NginxClient) patch(path string, input interface{}, expectedStatusC
 
 	jsonInput, err := json.Marshal(input)
 	if err != nil {
-		return fmt.Errorf("failed to marshall input: %v", err)
+		return fmt.Errorf("failed to marshall input: %w", err)
 	}
 
 	req, err := http.NewRequest(http.MethodPatch, path, bytes.NewBuffer(jsonInput))
 	if err != nil {
-		return fmt.Errorf("failed to create a patch request: %v", err)
+		return fmt.Errorf("failed to create a patch request: %w", err)
 	}
 
 	resp, err := client.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to create patch request: %v", err)
+		return fmt.Errorf("failed to create patch request: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -813,7 +813,7 @@ func (client *NginxClient) GetStreamServers(upstream string) ([]StreamUpstreamSe
 	var servers []StreamUpstreamServer
 	err := client.get(path, &servers)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get stream servers of upstream server %v: %v", upstream, err)
+		return nil, fmt.Errorf("failed to get stream servers of upstream server %v: %w", upstream, err)
 	}
 	return servers, nil
 }
@@ -822,7 +822,7 @@ func (client *NginxClient) GetStreamServers(upstream string) ([]StreamUpstreamSe
 func (client *NginxClient) AddStreamServer(upstream string, server StreamUpstreamServer) error {
 	id, err := client.getIDOfStreamServer(upstream, server.Server)
 	if err != nil {
-		return fmt.Errorf("failed to add %v stream server to %v upstream: %v", server.Server, upstream, err)
+		return fmt.Errorf("failed to add %v stream server to %v upstream: %w", server.Server, upstream, err)
 	}
 	if id != -1 {
 		return fmt.Errorf("failed to add %v stream server to %v upstream: server already exists", server.Server, upstream)
@@ -831,7 +831,7 @@ func (client *NginxClient) AddStreamServer(upstream string, server StreamUpstrea
 	path := fmt.Sprintf("stream/upstreams/%v/servers/", upstream)
 	err = client.post(path, &server)
 	if err != nil {
-		return fmt.Errorf("failed to add %v stream server to %v upstream: %v", server.Server, upstream, err)
+		return fmt.Errorf("failed to add %v stream server to %v upstream: %w", server.Server, upstream, err)
 	}
 	return nil
 }
@@ -840,7 +840,7 @@ func (client *NginxClient) AddStreamServer(upstream string, server StreamUpstrea
 func (client *NginxClient) DeleteStreamServer(upstream string, server string) error {
 	id, err := client.getIDOfStreamServer(upstream, server)
 	if err != nil {
-		return fmt.Errorf("failed to remove %v stream server from  %v upstream: %v", server, upstream, err)
+		return fmt.Errorf("failed to remove %v stream server from  %v upstream: %w", server, upstream, err)
 	}
 	if id == -1 {
 		return fmt.Errorf("failed to remove %v stream server from %v upstream: server doesn't exist", server, upstream)
@@ -849,7 +849,7 @@ func (client *NginxClient) DeleteStreamServer(upstream string, server string) er
 	path := fmt.Sprintf("stream/upstreams/%v/servers/%v", upstream, id)
 	err = client.delete(path, http.StatusOK)
 	if err != nil {
-		return fmt.Errorf("failed to remove %v stream server from %v upstream: %v", server, upstream, err)
+		return fmt.Errorf("failed to remove %v stream server from %v upstream: %w", server, upstream, err)
 	}
 	return nil
 }
@@ -861,7 +861,7 @@ func (client *NginxClient) DeleteStreamServer(upstream string, server string) er
 func (client *NginxClient) UpdateStreamServers(upstream string, servers []StreamUpstreamServer) (added []StreamUpstreamServer, deleted []StreamUpstreamServer, updated []StreamUpstreamServer, err error) {
 	serversInNginx, err := client.GetStreamServers(upstream)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to update stream servers of %v upstream: %v", upstream, err)
+		return nil, nil, nil, fmt.Errorf("failed to update stream servers of %v upstream: %w", upstream, err)
 	}
 
 	var formattedServers []StreamUpstreamServer
@@ -875,21 +875,21 @@ func (client *NginxClient) UpdateStreamServers(upstream string, servers []Stream
 	for _, server := range toAdd {
 		err := client.AddStreamServer(upstream, server)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to update stream servers of %v upstream: %v", upstream, err)
+			return nil, nil, nil, fmt.Errorf("failed to update stream servers of %v upstream: %w", upstream, err)
 		}
 	}
 
 	for _, server := range toDelete {
 		err := client.DeleteStreamServer(upstream, server.Server)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to update stream servers of %v upstream: %v", upstream, err)
+			return nil, nil, nil, fmt.Errorf("failed to update stream servers of %v upstream: %w", upstream, err)
 		}
 	}
 
 	for _, server := range toUpdate {
 		err := client.UpdateStreamServer(upstream, server)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to update stream servers of %v upstream: %v", upstream, err)
+			return nil, nil, nil, fmt.Errorf("failed to update stream servers of %v upstream: %w", upstream, err)
 		}
 	}
 
@@ -899,7 +899,7 @@ func (client *NginxClient) UpdateStreamServers(upstream string, servers []Stream
 func (client *NginxClient) getIDOfStreamServer(upstream string, name string) (int, error) {
 	servers, err := client.GetStreamServers(upstream)
 	if err != nil {
-		return -1, fmt.Errorf("error getting id of stream server %v of upstream %v: %v", name, upstream, err)
+		return -1, fmt.Errorf("error getting id of stream server %v of upstream %v: %w", name, upstream, err)
 	}
 
 	for _, s := range servers {
@@ -993,72 +993,72 @@ func determineStreamUpdates(updatedServers []StreamUpstreamServer, nginxServers 
 func (client *NginxClient) GetStats() (*Stats, error) {
 	info, err := client.GetNginxInfo()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %v", err)
+		return nil, fmt.Errorf("failed to get stats: %w", err)
 	}
 
 	caches, err := client.GetCaches()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %v", err)
+		return nil, fmt.Errorf("failed to get stats: %w", err)
 	}
 
 	processes, err := client.GetProcesses()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %v", err)
+		return nil, fmt.Errorf("failed to get stats: %w", err)
 	}
 
 	slabs, err := client.GetSlabs()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %v", err)
+		return nil, fmt.Errorf("failed to get stats: %w", err)
 	}
 
 	cons, err := client.GetConnections()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %v", err)
+		return nil, fmt.Errorf("failed to get stats: %w", err)
 	}
 
 	requests, err := client.GetHTTPRequests()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get stats: %v", err)
+		return nil, fmt.Errorf("Failed to get stats: %w", err)
 	}
 
 	ssl, err := client.GetSSL()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %v", err)
+		return nil, fmt.Errorf("failed to get stats: %w", err)
 	}
 
 	zones, err := client.GetServerZones()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %v", err)
+		return nil, fmt.Errorf("failed to get stats: %w", err)
 	}
 
 	upstreams, err := client.GetUpstreams()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %v", err)
+		return nil, fmt.Errorf("failed to get stats: %w", err)
 	}
 
 	streamZones, err := client.GetStreamServerZones()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %v", err)
+		return nil, fmt.Errorf("failed to get stats: %w", err)
 	}
 
 	streamUpstreams, err := client.GetStreamUpstreams()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %v", err)
+		return nil, fmt.Errorf("failed to get stats: %w", err)
 	}
 
 	streamZoneSync, err := client.GetStreamZoneSync()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %v", err)
+		return nil, fmt.Errorf("failed to get stats: %w", err)
 	}
 
 	locationZones, err := client.GetLocationZones()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %v", err)
+		return nil, fmt.Errorf("failed to get stats: %w", err)
 	}
 
 	resolvers, err := client.GetResolvers()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %v", err)
+		return nil, fmt.Errorf("failed to get stats: %w", err)
 	}
 
 	return &Stats{
@@ -1084,7 +1084,7 @@ func (client *NginxClient) GetNginxInfo() (*NginxInfo, error) {
 	var info NginxInfo
 	err := client.get("nginx", &info)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get info: %v", err)
+		return nil, fmt.Errorf("failed to get info: %w", err)
 	}
 	return &info, nil
 }
@@ -1094,7 +1094,7 @@ func (client *NginxClient) GetCaches() (*Caches, error) {
 	var caches Caches
 	err := client.get("http/caches", &caches)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get caches: %v", err)
+		return nil, fmt.Errorf("failed to get caches: %w", err)
 	}
 	return &caches, nil
 }
@@ -1104,7 +1104,7 @@ func (client *NginxClient) GetSlabs() (*Slabs, error) {
 	var slabs Slabs
 	err := client.get("slabs", &slabs)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get slabs: %v", err)
+		return nil, fmt.Errorf("failed to get slabs: %w", err)
 	}
 	return &slabs, nil
 }
@@ -1114,7 +1114,7 @@ func (client *NginxClient) GetConnections() (*Connections, error) {
 	var cons Connections
 	err := client.get("connections", &cons)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get connections: %v", err)
+		return nil, fmt.Errorf("failed to get connections: %w", err)
 	}
 	return &cons, nil
 }
@@ -1124,7 +1124,7 @@ func (client *NginxClient) GetHTTPRequests() (*HTTPRequests, error) {
 	var requests HTTPRequests
 	err := client.get("http/requests", &requests)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get http requests: %v", err)
+		return nil, fmt.Errorf("failed to get http requests: %w", err)
 	}
 	return &requests, nil
 }
@@ -1134,7 +1134,7 @@ func (client *NginxClient) GetSSL() (*SSL, error) {
 	var ssl SSL
 	err := client.get("ssl", &ssl)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get ssl: %v", err)
+		return nil, fmt.Errorf("failed to get ssl: %w", err)
 	}
 	return &ssl, nil
 }
@@ -1144,7 +1144,7 @@ func (client *NginxClient) GetServerZones() (*ServerZones, error) {
 	var zones ServerZones
 	err := client.get("http/server_zones", &zones)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get server zones: %v", err)
+		return nil, fmt.Errorf("failed to get server zones: %w", err)
 	}
 	return &zones, err
 }
@@ -1154,12 +1154,13 @@ func (client *NginxClient) GetStreamServerZones() (*StreamServerZones, error) {
 	var zones StreamServerZones
 	err := client.get("stream/server_zones", &zones)
 	if err != nil {
-		if err, ok := err.(*internalError); ok {
-			if err.Code == pathNotFoundCode {
+		var ie *internalError
+		if errors.As(err, &ie) {
+			if ie.Code == pathNotFoundCode {
 				return &zones, nil
 			}
 		}
-		return nil, fmt.Errorf("failed to get stream server zones: %v", err)
+		return nil, fmt.Errorf("failed to get stream server zones: %w", err)
 	}
 	return &zones, err
 }
@@ -1169,7 +1170,7 @@ func (client *NginxClient) GetUpstreams() (*Upstreams, error) {
 	var upstreams Upstreams
 	err := client.get("http/upstreams", &upstreams)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get upstreams: %v", err)
+		return nil, fmt.Errorf("failed to get upstreams: %w", err)
 	}
 	return &upstreams, nil
 }
@@ -1179,12 +1180,13 @@ func (client *NginxClient) GetStreamUpstreams() (*StreamUpstreams, error) {
 	var upstreams StreamUpstreams
 	err := client.get("stream/upstreams", &upstreams)
 	if err != nil {
-		if err, ok := err.(*internalError); ok {
-			if err.Code == pathNotFoundCode {
+		var ie *internalError
+		if errors.As(err, &ie) {
+			if ie.Code == pathNotFoundCode {
 				return &upstreams, nil
 			}
 		}
-		return nil, fmt.Errorf("failed to get stream upstreams: %v", err)
+		return nil, fmt.Errorf("failed to get stream upstreams: %w", err)
 	}
 	return &upstreams, nil
 }
@@ -1194,12 +1196,13 @@ func (client *NginxClient) GetStreamZoneSync() (*StreamZoneSync, error) {
 	var streamZoneSync StreamZoneSync
 	err := client.get("stream/zone_sync", &streamZoneSync)
 	if err != nil {
-		if err, ok := err.(*internalError); ok {
-			if err.Code == pathNotFoundCode {
+		var ie *internalError
+		if errors.As(err, &ie) {
+			if ie.Code == pathNotFoundCode {
 				return nil, nil
 			}
 		}
-		return nil, fmt.Errorf("failed to get stream zone sync: %v", err)
+		return nil, fmt.Errorf("failed to get stream zone sync: %w", err)
 	}
 
 	return &streamZoneSync, err
@@ -1213,7 +1216,7 @@ func (client *NginxClient) GetLocationZones() (*LocationZones, error) {
 	}
 	err := client.get("http/location_zones", &locationZones)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get location zones: %v", err)
+		return nil, fmt.Errorf("failed to get location zones: %w", err)
 	}
 
 	return &locationZones, err
@@ -1227,7 +1230,7 @@ func (client *NginxClient) GetResolvers() (*Resolvers, error) {
 	}
 	err := client.get("resolvers", &resolvers)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get resolvers: %v", err)
+		return nil, fmt.Errorf("failed to get resolvers: %w", err)
 	}
 
 	return &resolvers, err
@@ -1238,7 +1241,7 @@ func (client *NginxClient) GetProcesses() (*Processes, error) {
 	var processes Processes
 	err := client.get("processes", &processes)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get processes: %v", err)
+		return nil, fmt.Errorf("failed to get processes: %w", err)
 	}
 
 	return &processes, err
@@ -1273,7 +1276,7 @@ func (client *NginxClient) getKeyValPairs(zone string, stream bool) (KeyValPairs
 	var keyValPairs KeyValPairs
 	err := client.get(path, &keyValPairs)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get keyvals for %v/%v zone: %v", base, zone, err)
+		return nil, fmt.Errorf("failed to get keyvals for %v/%v zone: %w", base, zone, err)
 	}
 	return keyValPairs, nil
 }
@@ -1298,7 +1301,7 @@ func (client *NginxClient) getAllKeyValPairs(stream bool) (KeyValPairsByZone, er
 	var keyValPairsByZone KeyValPairsByZone
 	err := client.get(path, &keyValPairsByZone)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get keyvals for all %v zones: %v", base, err)
+		return nil, fmt.Errorf("failed to get keyvals for all %v zones: %w", base, err)
 	}
 	return keyValPairsByZone, nil
 }
@@ -1326,7 +1329,7 @@ func (client *NginxClient) addKeyValPair(zone string, key string, val string, st
 	input := KeyValPairs{key: val}
 	err := client.post(path, &input)
 	if err != nil {
-		return fmt.Errorf("failed to add key value pair for %v/%v zone: %v", base, zone, err)
+		return fmt.Errorf("failed to add key value pair for %v/%v zone: %w", base, zone, err)
 	}
 	return nil
 }
@@ -1354,7 +1357,7 @@ func (client *NginxClient) modifyKeyValPair(zone string, key string, val string,
 	input := KeyValPairs{key: val}
 	err := client.patch(path, &input, http.StatusNoContent)
 	if err != nil {
-		return fmt.Errorf("failed to update key value pair for %v/%v zone: %v", base, zone, err)
+		return fmt.Errorf("failed to update key value pair for %v/%v zone: %w", base, zone, err)
 	}
 	return nil
 }
@@ -1387,7 +1390,7 @@ func (client *NginxClient) deleteKeyValuePair(zone string, key string, stream bo
 	path := fmt.Sprintf("%v/keyvals/%v", base, zone)
 	err := client.patch(path, &keyval, http.StatusNoContent)
 	if err != nil {
-		return fmt.Errorf("failed to remove key values pair for %v/%v zone: %v", base, zone, err)
+		return fmt.Errorf("failed to remove key values pair for %v/%v zone: %w", base, zone, err)
 	}
 	return nil
 }
@@ -1414,7 +1417,7 @@ func (client *NginxClient) deleteKeyValPairs(zone string, stream bool) error {
 	path := fmt.Sprintf("%v/keyvals/%v", base, zone)
 	err := client.delete(path, http.StatusNoContent)
 	if err != nil {
-		return fmt.Errorf("failed to remove all key value pairs for %v/%v zone: %v", base, zone, err)
+		return fmt.Errorf("failed to remove all key value pairs for %v/%v zone: %w", base, zone, err)
 	}
 	return nil
 }
@@ -1425,7 +1428,7 @@ func (client *NginxClient) UpdateHTTPServer(upstream string, server UpstreamServ
 	server.ID = 0
 	err := client.patch(path, &server, http.StatusOK)
 	if err != nil {
-		return fmt.Errorf("failed to update %v server to %v upstream: %v", server.Server, upstream, err)
+		return fmt.Errorf("failed to update %v server to %v upstream: %w", server.Server, upstream, err)
 	}
 
 	return nil
@@ -1437,7 +1440,7 @@ func (client *NginxClient) UpdateStreamServer(upstream string, server StreamUpst
 	server.ID = 0
 	err := client.patch(path, &server, http.StatusOK)
 	if err != nil {
-		return fmt.Errorf("failed to update %v stream server to %v upstream: %v", server.Server, upstream, err)
+		return fmt.Errorf("failed to update %v stream server to %v upstream: %w", server.Server, upstream, err)
 	}
 
 	return nil
