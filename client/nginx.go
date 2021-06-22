@@ -459,11 +459,17 @@ func versionSupported(n int) bool {
 }
 
 func getAPIVersions(httpClient *http.Client, endpoint string) (*versions, error) {
-	resp, err := httpClient.Get(endpoint)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create a get request: %w", err)
+	}
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("%v is not accessible: %w", endpoint, err)
 	}
-	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("%v is not accessible: expected %v response, got %v", endpoint, http.StatusOK, resp.StatusCode)
@@ -707,12 +713,20 @@ func (client *NginxClient) getIDOfHTTPServer(upstream string, name string) (int,
 }
 
 func (client *NginxClient) get(path string, data interface{}) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	url := fmt.Sprintf("%v/%v/%v", client.apiEndpoint, client.version, path)
-	resp, err := client.httpClient.Get(url)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create a get request: %w", err)
+	}
+
+	resp, err := client.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to get %v: %w", path, err)
 	}
-	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		return createResponseMismatchError(resp.Body).Wrap(fmt.Sprintf(
 			"expected %v response, got %v",
@@ -732,6 +746,9 @@ func (client *NginxClient) get(path string, data interface{}) error {
 }
 
 func (client *NginxClient) post(path string, input interface{}) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	url := fmt.Sprintf("%v/%v/%v", client.apiEndpoint, client.version, path)
 
 	jsonInput, err := json.Marshal(input)
@@ -739,11 +756,16 @@ func (client *NginxClient) post(path string, input interface{}) error {
 		return fmt.Errorf("failed to marshall input: %w", err)
 	}
 
-	resp, err := client.httpClient.Post(url, "application/json", bytes.NewBuffer(jsonInput))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(jsonInput))
+	if err != nil {
+		return fmt.Errorf("failed to create a post request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to post %v: %w", path, err)
 	}
-	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
 		return createResponseMismatchError(resp.Body).Wrap(fmt.Sprintf(
 			"expected %v response, got %v",
@@ -768,8 +790,6 @@ func (client *NginxClient) delete(path string, expectedStatusCode int) error {
 	if err != nil {
 		return fmt.Errorf("failed to create delete request: %w", err)
 	}
-	defer resp.Body.Close()
-
 	if resp.StatusCode != expectedStatusCode {
 		return createResponseMismatchError(resp.Body).Wrap(fmt.Sprintf(
 			"failed to complete delete request: expected %v response, got %v",
