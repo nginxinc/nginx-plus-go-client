@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-20.04
     if:
       github.event.pull_request.head.repo.full_name == 'nginxinc/nginx-plus-go-client' ||
-      github.event_name == 'push'
+      github.event_name == 'push' || github.event_name == 'schedule'
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
