@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+	"time"
 )
 
 const (
@@ -752,9 +754,12 @@ func (client *NginxClient) post(path string, input interface{}) error {
 }
 
 func (client *NginxClient) delete(path string, expectedStatusCode int) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	path = fmt.Sprintf("%v/%v/%v/", client.apiEndpoint, client.version, path)
 
-	req, err := http.NewRequest(http.MethodDelete, path, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, path, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create a delete request: %w", err)
 	}
@@ -774,6 +779,9 @@ func (client *NginxClient) delete(path string, expectedStatusCode int) error {
 }
 
 func (client *NginxClient) patch(path string, input interface{}, expectedStatusCode int) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	path = fmt.Sprintf("%v/%v/%v/", client.apiEndpoint, client.version, path)
 
 	jsonInput, err := json.Marshal(input)
@@ -781,7 +789,7 @@ func (client *NginxClient) patch(path string, input interface{}, expectedStatusC
 		return fmt.Errorf("failed to marshall input: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPatch, path, bytes.NewBuffer(jsonInput))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPatch, path, bytes.NewBuffer(jsonInput))
 	if err != nil {
 		return fmt.Errorf("failed to create a patch request: %w", err)
 	}
