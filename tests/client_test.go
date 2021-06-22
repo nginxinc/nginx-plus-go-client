@@ -33,7 +33,6 @@ var (
 func TestStreamClient(t *testing.T) {
 	httpClient := &http.Client{}
 	c, err := client.NewNginxClient(httpClient, helpers.GetAPIEndpoint())
-
 	if err != nil {
 		t.Fatalf("Error when creating a client: %v", err)
 	}
@@ -90,7 +89,6 @@ func TestStreamClient(t *testing.T) {
 	}
 
 	streamAdded, streamDeleted, streamUpdated, err := c.UpdateStreamServers(streamUpstream, streamServers1)
-
 	if err != nil {
 		t.Fatalf("Error when updating servers: %v", err)
 	}
@@ -117,7 +115,6 @@ func TestStreamClient(t *testing.T) {
 	// updating with the same servers
 
 	added, deleted, updated, err := c.UpdateStreamServers(streamUpstream, streamServers1)
-
 	if err != nil {
 		t.Fatalf("Error when updating servers: %v", err)
 	}
@@ -201,7 +198,8 @@ func TestStreamClient(t *testing.T) {
 		},
 		{
 			Server: "127.0.0.2:8004",
-		}, {
+		},
+		{
 			Server: "127.0.0.2:8005",
 		},
 	}
@@ -303,7 +301,6 @@ func TestStreamUpstreamServer(t *testing.T) {
 func TestClient(t *testing.T) {
 	httpClient := &http.Client{}
 	c, err := client.NewNginxClient(httpClient, helpers.GetAPIEndpoint())
-
 	if err != nil {
 		t.Fatalf("Error when creating a client: %v", err)
 	}
@@ -364,7 +361,6 @@ func TestClient(t *testing.T) {
 	}
 
 	added, deleted, updated, err := c.UpdateHTTPServers(upstream, servers1)
-
 	if err != nil {
 		t.Fatalf("Error when updating servers: %v", err)
 	}

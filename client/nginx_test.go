@@ -7,107 +7,116 @@ import (
 
 func TestDetermineUpdates(t *testing.T) {
 	maxConns := 1
-	var tests = []struct {
+	tests := []struct {
 		updated          []UpstreamServer
 		nginx            []UpstreamServer
 		expectedToAdd    []UpstreamServer
 		expectedToDelete []UpstreamServer
 		expectedToUpdate []UpstreamServer
-	}{{
-		updated: []UpstreamServer{
-			{
-				Server: "10.0.0.3:80",
+	}{
+		{
+			updated: []UpstreamServer{
+				{
+					Server: "10.0.0.3:80",
+				},
+				{
+					Server: "10.0.0.4:80",
+				},
 			},
-			{
-				Server: "10.0.0.4:80",
+			nginx: []UpstreamServer{
+				{
+					ID:     1,
+					Server: "10.0.0.1:80",
+				},
+				{
+					ID:     2,
+					Server: "10.0.0.2:80",
+				},
 			},
-		},
-		nginx: []UpstreamServer{
-			{
-				ID:     1,
-				Server: "10.0.0.1:80",
+			expectedToAdd: []UpstreamServer{
+				{
+					Server: "10.0.0.3:80",
+				},
+				{
+					Server: "10.0.0.4:80",
+				},
 			},
-			{
-				ID:     2,
-				Server: "10.0.0.2:80",
-			},
-		},
-		expectedToAdd: []UpstreamServer{
-			{
-				Server: "10.0.0.3:80",
-			},
-			{
-				Server: "10.0.0.4:80",
-			},
-		},
-		expectedToDelete: []UpstreamServer{
-			{
-				ID:     1,
-				Server: "10.0.0.1:80",
-			},
-			{
-				ID:     2,
-				Server: "10.0.0.2:80",
-			},
-		}}, {
-		updated: []UpstreamServer{
-			{
-				Server: "10.0.0.2:80",
-			},
-			{
-				Server: "10.0.0.3:80",
-			},
-			{
-				Server: "10.0.0.4:80",
+			expectedToDelete: []UpstreamServer{
+				{
+					ID:     1,
+					Server: "10.0.0.1:80",
+				},
+				{
+					ID:     2,
+					Server: "10.0.0.2:80",
+				},
 			},
 		},
-		nginx: []UpstreamServer{
-			{
-				ID:     1,
-				Server: "10.0.0.1:80",
+		{
+			updated: []UpstreamServer{
+				{
+					Server: "10.0.0.2:80",
+				},
+				{
+					Server: "10.0.0.3:80",
+				},
+				{
+					Server: "10.0.0.4:80",
+				},
 			},
-			{
-				ID:     2,
-				Server: "10.0.0.2:80",
+			nginx: []UpstreamServer{
+				{
+					ID:     1,
+					Server: "10.0.0.1:80",
+				},
+				{
+					ID:     2,
+					Server: "10.0.0.2:80",
+				},
+				{
+					ID:     3,
+					Server: "10.0.0.3:80",
+				},
 			},
-			{
-				ID:     3,
-				Server: "10.0.0.3:80",
+			expectedToAdd: []UpstreamServer{
+				{
+					Server: "10.0.0.4:80",
+				},
+			},
+			expectedToDelete: []UpstreamServer{
+				{
+					ID:     1,
+					Server: "10.0.0.1:80",
+				},
 			},
 		},
-		expectedToAdd: []UpstreamServer{
-			{
-				Server: "10.0.0.4:80",
-			}},
-		expectedToDelete: []UpstreamServer{
-			{
-				ID:     1,
-				Server: "10.0.0.1:80",
-			}},
-	}, {
-		updated: []UpstreamServer{
-			{
-				Server: "10.0.0.1:80",
+		{
+			updated: []UpstreamServer{
+				{
+					Server: "10.0.0.1:80",
+				},
+				{
+					Server: "10.0.0.2:80",
+				},
+				{
+					Server: "10.0.0.3:80",
+				},
 			},
-			{
-				Server: "10.0.0.2:80",
+			nginx: []UpstreamServer{
+				{
+					Server: "10.0.0.1:80",
+				},
+				{
+					Server: "10.0.0.2:80",
+				},
+				{
+					Server: "10.0.0.3:80",
+				},
 			},
-			{
-				Server: "10.0.0.3:80",
-			}},
-		nginx: []UpstreamServer{
-			{
-				Server: "10.0.0.1:80",
-			},
-			{
-				Server: "10.0.0.2:80",
-			},
-			{
-				Server: "10.0.0.3:80",
-			},
-		}}, {
-		// empty values
-	},
+		},
+		{
+			// empty values
+		},
 		{
 			updated: []UpstreamServer{
 				{
@@ -137,7 +146,8 @@ func TestDetermineUpdates(t *testing.T) {
 					Server:   "10.0.0.1:80",
 					MaxConns: &maxConns,
 				},
-			}},
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -150,110 +160,119 @@ func TestDetermineUpdates(t *testing.T) {
 
 func TestStreamDetermineUpdates(t *testing.T) {
 	maxConns := 1
-	var tests = []struct {
+	tests := []struct {
 		updated          []StreamUpstreamServer
 		nginx            []StreamUpstreamServer
 		expectedToAdd    []StreamUpstreamServer
 		expectedToDelete []StreamUpstreamServer
 		expectedToUpdate []StreamUpstreamServer
-	}{{
-		updated: []StreamUpstreamServer{
-			{
-				Server: "10.0.0.3:80",
+	}{
+		{
+			updated: []StreamUpstreamServer{
+				{
+					Server: "10.0.0.3:80",
+				},
+				{
+					Server: "10.0.0.4:80",
+				},
 			},
-			{
-				Server: "10.0.0.4:80",
+			nginx: []StreamUpstreamServer{
+				{
+					ID:     1,
+					Server: "10.0.0.1:80",
+				},
+				{
+					ID:     2,
+					Server: "10.0.0.2:80",
+				},
 			},
-		},
-		nginx: []StreamUpstreamServer{
-			{
-				ID:     1,
-				Server: "10.0.0.1:80",
+			expectedToAdd: []StreamUpstreamServer{
+				{
+					Server: "10.0.0.3:80",
+				},
+				{
+					Server: "10.0.0.4:80",
+				},
 			},
-			{
-				ID:     2,
-				Server: "10.0.0.2:80",
-			},
-		},
-		expectedToAdd: []StreamUpstreamServer{
-			{
-				Server: "10.0.0.3:80",
-			},
-			{
-				Server: "10.0.0.4:80",
-			},
-		},
-		expectedToDelete: []StreamUpstreamServer{
-			{
-				ID:     1,
-				Server: "10.0.0.1:80",
-			},
-			{
-				ID:     2,
-				Server: "10.0.0.2:80",
-			},
-		}}, {
-		updated: []StreamUpstreamServer{
-			{
-				Server: "10.0.0.2:80",
-			},
-			{
-				Server: "10.0.0.3:80",
-			},
-			{
-				Server: "10.0.0.4:80",
+			expectedToDelete: []StreamUpstreamServer{
+				{
+					ID:     1,
+					Server: "10.0.0.1:80",
+				},
+				{
+					ID:     2,
+					Server: "10.0.0.2:80",
+				},
 			},
 		},
-		nginx: []StreamUpstreamServer{
-			{
-				ID:     1,
-				Server: "10.0.0.1:80",
+		{
+			updated: []StreamUpstreamServer{
+				{
+					Server: "10.0.0.2:80",
+				},
+				{
+					Server: "10.0.0.3:80",
+				},
+				{
+					Server: "10.0.0.4:80",
+				},
 			},
-			{
-				ID:     2,
-				Server: "10.0.0.2:80",
+			nginx: []StreamUpstreamServer{
+				{
+					ID:     1,
+					Server: "10.0.0.1:80",
+				},
+				{
+					ID:     2,
+					Server: "10.0.0.2:80",
+				},
+				{
+					ID:     3,
+					Server: "10.0.0.3:80",
+				},
 			},
-			{
-				ID:     3,
-				Server: "10.0.0.3:80",
+			expectedToAdd: []StreamUpstreamServer{
+				{
+					Server: "10.0.0.4:80",
+				},
+			},
+			expectedToDelete: []StreamUpstreamServer{
+				{
+					ID:     1,
+					Server: "10.0.0.1:80",
+				},
 			},
 		},
-		expectedToAdd: []StreamUpstreamServer{
-			{
-				Server: "10.0.0.4:80",
-			}},
-		expectedToDelete: []StreamUpstreamServer{
-			{
-				ID:     1,
-				Server: "10.0.0.1:80",
-			}},
-	}, {
-		updated: []StreamUpstreamServer{
-			{
-				Server: "10.0.0.1:80",
+		{
+			updated: []StreamUpstreamServer{
+				{
+					Server: "10.0.0.1:80",
+				},
+				{
+					Server: "10.0.0.2:80",
+				},
+				{
+					Server: "10.0.0.3:80",
+				},
 			},
-			{
-				Server: "10.0.0.2:80",
+			nginx: []StreamUpstreamServer{
+				{
+					ID:     1,
+					Server: "10.0.0.1:80",
+				},
+				{
+					ID:     2,
+					Server: "10.0.0.2:80",
+				},
+				{
+					ID:     3,
+					Server: "10.0.0.3:80",
+				},
 			},
-			{
-				Server: "10.0.0.3:80",
-			}},
-		nginx: []StreamUpstreamServer{
-			{
-				ID:     1,
-				Server: "10.0.0.1:80",
-			},
-			{
-				ID:     2,
-				Server: "10.0.0.2:80",
-			},
-			{
-				ID:     3,
-				Server: "10.0.0.3:80",
-			},
-		}}, {
-		// empty values
-	},
+		},
+		{
+			// empty values
+		},
 		{
 			updated: []StreamUpstreamServer{
 				{
@@ -283,7 +302,8 @@ func TestStreamDetermineUpdates(t *testing.T) {
 					Server:   "10.0.0.1:80",
 					MaxConns: &maxConns,
 				},
-			}},
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -296,7 +316,7 @@ func TestStreamDetermineUpdates(t *testing.T) {
 
 func TestAddPortToServer(t *testing.T) {
 	// More info about addresses http://nginx.org/en/docs/http/ngx_http_upstream_module.html#server
-	var tests = []struct {
+	tests := []struct {
 		address  string
 		expected string
 		msg      string

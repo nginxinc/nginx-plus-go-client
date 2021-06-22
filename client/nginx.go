@@ -421,7 +421,7 @@ func NewNginxClient(httpClient *http.Client, apiEndpoint string) (*NginxClient, 
 	return NewNginxClientWithVersion(httpClient, apiEndpoint, APIVersion)
 }
 
-//NewNginxClientWithVersion creates an NginxClient with the given version of NGINX Plus API.
+// NewNginxClientWithVersion creates an NginxClient with the given version of NGINX Plus API.
 func NewNginxClientWithVersion(httpClient *http.Client, apiEndpoint string, version int) (*NginxClient, error) {
 	if !versionSupported(version) {
 		return nil, fmt.Errorf("API version %v is not supported by the client", version)
