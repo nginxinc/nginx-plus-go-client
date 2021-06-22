@@ -640,7 +640,7 @@ func TestStats(t *testing.T) {
 			t.Errorf("Slab slots not visible in stats: %v", val.Slots)
 		}
 	} else {
-		t.Errorf("Slab stats for upsteam '%v' not found", upstream)
+		t.Errorf("Slab stats for upstream '%v' not found", upstream)
 	}
 
 	if stats.HTTPRequests.Total < 1 {
