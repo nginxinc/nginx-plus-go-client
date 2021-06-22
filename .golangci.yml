@@ -1,0 +1,34 @@
+linters-settings:
+  misspell:
+    locale: US
+
+linters:
+    enable:
+    - asciicheck
+    - deadcode
+    - errcheck
+    - errorlint
+    - gofmt
+    - gofumpt
+    - goimports
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - makezero
+    - misspell
+    - nilerr
+    - noctx
+    - predeclared
+    - staticcheck
+    - structcheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - varcheck
+    - wastedassign
+    disable-all: true
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
