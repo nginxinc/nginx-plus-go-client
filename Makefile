@@ -6,7 +6,6 @@ DOCKER_NGINX_PLUS?=nginx-plus
 DOCKER_NGINX_PLUS_HELPER?=nginx-plus-helper
 
 GOLANG_CONTAINER=golang:1.16
-GOLANGCI_CONTAINER=golangci/golangci-lint:latest
 
 export TEST_API_ENDPOINT=http://$(DOCKER_NGINX_PLUS):8080/api
 export TEST_API_ENDPOINT_OF_HELPER=http://$(DOCKER_NGINX_PLUS_HELPER):8080/api
@@ -15,10 +14,7 @@ export TEST_UNAVAILABLE_STREAM_ADDRESS=$(DOCKER_NGINX_PLUS):8081
 test: docker-build run-nginx-plus test-run configure-no-stream-block test-run-no-stream-block clean
 
 lint:
-	docker run --rm \
-	-v $(shell pwd):/go/src/github.com/nginxinc/nginx-plus-go-client \
-	-w /go/src/github.com/nginxinc/nginx-plus-go-client \
-	$(GOLANGCI_CONTAINER) golangci-lint run
+	docker run --pull always --rm -v $(shell pwd):/nginx-plus-go-client -w /nginx-plus-go-client -v $(shell go env GOCACHE):/cache/go -e GOCACHE=/cache/go -e GOLANGCI_LINT_CACHE=/cache/go -v $(shell go env GOPATH)/pkg:/go/pkg golangci/golangci-lint:latest golangci-lint --color always run
 
 docker-build:
 	docker build --secret id=nginx-repo.crt,src=docker/nginx-repo.crt --secret id=nginx-repo.key,src=docker/nginx-repo.key --build-arg NGINX_PLUS_VERSION=$(NGINX_PLUS_VERSION) -t $(NGINX_IMAGE) docker

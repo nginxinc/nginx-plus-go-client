@@ -30,4 +30,4 @@ jobs:
       - name: Lint Code
         uses: golangci/golangci-lint-action@v2
         with:
-          args: --timeout ${{ env.GOLANGCI_TIMEOUT }} --issues-exit-code=0 ./client/...
+          args: --timeout ${{ env.GOLANGCI_TIMEOUT }}
