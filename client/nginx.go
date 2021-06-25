@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
-	"time"
 )
 
 const (
@@ -459,7 +458,7 @@ func versionSupported(n int) bool {
 }
 
 func getAPIVersions(httpClient *http.Client, endpoint string) (*versions, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), httpClient.Timeout)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
@@ -713,7 +712,7 @@ func (client *NginxClient) getIDOfHTTPServer(upstream string, name string) (int,
 }
 
 func (client *NginxClient) get(path string, data interface{}) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), client.httpClient.Timeout)
 	defer cancel()
 
 	url := fmt.Sprintf("%v/%v/%v", client.apiEndpoint, client.version, path)
@@ -746,7 +745,7 @@ func (client *NginxClient) get(path string, data interface{}) error {
 }
 
 func (client *NginxClient) post(path string, input interface{}) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), client.httpClient.Timeout)
 	defer cancel()
 
 	url := fmt.Sprintf("%v/%v/%v", client.apiEndpoint, client.version, path)
@@ -776,7 +775,7 @@ func (client *NginxClient) post(path string, input interface{}) error {
 }
 
 func (client *NginxClient) delete(path string, expectedStatusCode int) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), client.httpClient.Timeout)
 	defer cancel()
 
 	path = fmt.Sprintf("%v/%v/%v/", client.apiEndpoint, client.version, path)
@@ -799,7 +798,7 @@ func (client *NginxClient) delete(path string, expectedStatusCode int) error {
 }
 
 func (client *NginxClient) patch(path string, input interface{}, expectedStatusCode int) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), client.httpClient.Timeout)
 	defer cancel()
 
 	path = fmt.Sprintf("%v/%v/%v/", client.apiEndpoint, client.version, path)
