@@ -470,6 +470,7 @@ func getAPIVersions(httpClient *http.Client, endpoint string) (*versions, error)
 	if err != nil {
 		return nil, fmt.Errorf("%v is not accessible: %w", endpoint, err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("%v is not accessible: expected %v response, got %v", endpoint, http.StatusOK, resp.StatusCode)
@@ -732,6 +733,7 @@ func (client *NginxClient) get(path string, data interface{}) error {
 			"expected %v response, got %v",
 			http.StatusOK, resp.StatusCode))
 	}
+	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -766,6 +768,8 @@ func (client *NginxClient) post(path string, input interface{}) error {
 	if err != nil {
 		return fmt.Errorf("failed to post %v: %w", path, err)
 	}
+	defer resp.Body.Close()
+
 	if resp.StatusCode != http.StatusCreated {
 		return createResponseMismatchError(resp.Body).Wrap(fmt.Sprintf(
 			"expected %v response, got %v",
@@ -790,6 +794,8 @@ func (client *NginxClient) delete(path string, expectedStatusCode int) error {
 	if err != nil {
 		return fmt.Errorf("failed to create delete request: %w", err)
 	}
+	defer resp.Body.Close()
+
 	if resp.StatusCode != expectedStatusCode {
 		return createResponseMismatchError(resp.Body).Wrap(fmt.Sprintf(
 			"failed to complete delete request: expected %v response, got %v",
