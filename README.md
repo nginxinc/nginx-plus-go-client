@@ -16,7 +16,7 @@ This Client works against version 5 of NGINX Plus API. Version 5 was introduced 
 ## Using the Client
 
 1. Import `github.com/nginxinc/nginx-plus-go-client/client` into your go project.
-2. Use your favourite vendor tool to add this to your `/vendor` directory in your project.
+2. Use your favorite vendor tool to add this to your `/vendor` directory in your project.
 
 ## Testing
 
@@ -37,7 +37,7 @@ Prerequisites:
 Run Tests:
 
 ```
-$ make test
+$ make docker-build && make test
 ```
 
 This will build and run two NGINX Plus containers and create one docker network of type bridge, execute the client tests against both NGINX Plus APIs, and then clean up. If it fails and you want to clean up (i.e. stop the running containers and remove the docker network), please use `$ make clean`

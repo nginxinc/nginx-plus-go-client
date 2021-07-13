@@ -34,24 +34,31 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
-      - name: Fetch Certificates
-        env:
-          CRT: ${{ secrets.NGINX_CRT }}
-          KEY: ${{ secrets.NGINX_KEY }}
-        run: |
-          echo "${CRT}" | base64 --decode > docker/nginx-repo.crt
-          echo "${KEY}" | base64 --decode > docker/nginx-repo.key
-      - name: Build & Test Client
-        if: (github.event_name != 'schedule')
-        run: make test
+      - name: Determine NGINX Plus version
+        run: echo "NGINX_PLUS_VERSION=$(cat Makefile | grep -m1 NGINX_PLUS_VERSION | cut -d "=" -f2)" >> $GITHUB_ENV
       - name: Switch Repository (Nightly)
         if: (github.event_name == 'schedule')
         run: |
           sed -i 's|pkgs.nginx.com|pkgs-test.nginx.com|g' docker/Dockerfile
           sed -i '15d' docker/Dockerfile
           sed -i 's|deb https|deb [trusted=yes] https|g' docker/Dockerfile
-          sed -i 's|nginx-plus-\${NGINX_PLUS_VERSION}|nginx-plus|g' docker/Dockerfile
-      - name: Build & Test Client (Nightly)
+          sed -i 's|nginx-plus-\${{ env.NGINX_PLUS_VERSION }}|nginx-plus|g' docker/Dockerfile
+      - name: Build Plus Docker Image
+        uses: docker/build-push-action@v2
+        with:
+          file: docker/Dockerfile
+          context: 'docker'
+          tags: nginx-plus:${{ env.NGINX_PLUS_VERSION }}
+          load: true
+          secrets: |
+            "nginx-repo.crt=${{ secrets.NGINX_CRT }}"
+            "nginx-repo.key=${{ secrets.NGINX_KEY }}"
+          build-args:
+            NGINX_PLUS_VERSION=${{ env.NGINX_PLUS_VERSION }}
+      - name: Test Client
+        if: (github.event_name != 'schedule')
+        run: make test
+      - name: Test Client (Nightly)
         if: (github.event_name == 'schedule')
         run: make test
         env:
