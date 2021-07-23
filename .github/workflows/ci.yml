@@ -13,8 +13,8 @@ on:
     paths-ignore:
       - '**.md'
       - 'LICENSE'
-  schedule:
-    - cron:  '0 5 * * *'
+#   schedule:
+#     - cron:  '0 5 * * *'
 
 env:
   DOCKER_BUILDKIT: 1
