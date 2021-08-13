@@ -13,8 +13,8 @@ on:
     paths-ignore:
       - '**.md'
       - 'LICENSE'
-#   schedule:
-#     - cron:  '0 5 * * *'
+  schedule:
+    - cron:  '0 5 * * *'
 
 env:
   DOCKER_BUILDKIT: 1
@@ -41,6 +41,7 @@ jobs:
         run: |
           sed -i 's|pkgs.nginx.com|pkgs-test.nginx.com|g' docker/Dockerfile
           sed -i '15d' docker/Dockerfile
+          sed -i "16i && sed -i 's|pkgs|pkgs-test|g' /etc/apt/apt.conf.d/90pkgs-nginx \\\ " docker/Dockerfile
           sed -i 's|deb https|deb [trusted=yes] https|g' docker/Dockerfile
           sed -i 's|nginx-plus-\${{ env.NGINX_PLUS_VERSION }}|nginx-plus|g' docker/Dockerfile
       - name: Build Plus Docker Image
