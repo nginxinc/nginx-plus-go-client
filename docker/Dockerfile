@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.3
-FROM debian:buster-slim
+FROM debian:bullseye-slim
 
 LABEL maintainer="NGINX Docker Maintainers <docker-maint@nginx.com>"
 
