@@ -1052,7 +1052,7 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 
 	requests, err := client.GetHTTPRequests()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get stats: %w", err)
+		return nil, fmt.Errorf("failed to get stats: %w", err)
 	}
 
 	ssl, err := client.GetSSL()
