@@ -44,12 +44,16 @@ jobs:
           sed -i "17i && sed -i 's|pkgs|pkgs-test|g' /etc/apt/apt.conf.d/90pkgs-nginx \\\ " docker/Dockerfile
           sed -i 's|deb https|deb [trusted=yes] https|g' docker/Dockerfile
           sed -i 's|nginx-plus-\${{ env.NGINX_PLUS_VERSION }}|nginx-plus|g' docker/Dockerfile
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
       - name: Build Plus Docker Image
         uses: docker/build-push-action@v2
         with:
           file: docker/Dockerfile
           context: 'docker'
           tags: nginx-plus:${{ env.NGINX_PLUS_VERSION }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           load: true
           secrets: |
             "nginx-repo.crt=${{ secrets.NGINX_CRT }}"
