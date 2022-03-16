@@ -1,3 +1,3 @@
 module github.com/nginxinc/nginx-plus-go-client
 
-go 1.17
+go 1.18
