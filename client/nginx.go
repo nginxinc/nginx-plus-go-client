@@ -16,7 +16,7 @@ import (
 
 const (
 	// APIVersion is the default version of NGINX Plus API supported by the client.
-	APIVersion = 5
+	APIVersion = 6
 
 	pathNotFoundCode  = "PathNotFound"
 	streamContext     = true
@@ -25,7 +25,7 @@ const (
 )
 
 var (
-	supportedAPIVersions = versions{4, 5}
+	supportedAPIVersions = versions{4, 5, 6}
 
 	// Default values for servers in Upstreams.
 	defaultMaxConns    = 0
@@ -116,20 +116,23 @@ func (internalError *internalError) Wrap(err string) *internalError {
 // Stats represents NGINX Plus stats fetched from the NGINX Plus API.
 // https://nginx.org/en/docs/http/ngx_http_api_module.html
 type Stats struct {
-	NginxInfo         NginxInfo
-	Caches            Caches
-	Processes         Processes
-	Connections       Connections
-	Slabs             Slabs
-	HTTPRequests      HTTPRequests
-	SSL               SSL
-	ServerZones       ServerZones
-	Upstreams         Upstreams
-	StreamServerZones StreamServerZones
-	StreamUpstreams   StreamUpstreams
-	StreamZoneSync    *StreamZoneSync
-	LocationZones     LocationZones
-	Resolvers         Resolvers
+	NginxInfo              NginxInfo
+	Caches                 Caches
+	Processes              Processes
+	Connections            Connections
+	Slabs                  Slabs
+	HTTPRequests           HTTPRequests
+	SSL                    SSL
+	ServerZones            ServerZones
+	Upstreams              Upstreams
+	StreamServerZones      StreamServerZones
+	StreamUpstreams        StreamUpstreams
+	StreamZoneSync         *StreamZoneSync
+	LocationZones          LocationZones
+	Resolvers              Resolvers
+	HTTPLimitRequests      HTTPLimitRequests
+	HTTPLimitConnections   HTTPLimitConnections
+	StreamLimitConnections StreamLimitConnections
 }
 
 // NginxInfo contains general information about NGINX Plus.
@@ -417,6 +420,31 @@ type ResolverResponses struct {
 type Processes struct {
 	Respawned int64
 }
+
+// HTTPLimitRequest represents HTTP Requests Rate Limiting
+type HTTPLimitRequest struct {
+	Passed         uint64
+	Delayed        uint64
+	Rejected       uint64
+	DelayedDryRun  uint64 `json:"delayed_dry_run"`
+	RejectedDryRun uint64 `json:"rejected_dry_run"`
+}
+
+// HTTPLimitRequests represents limit requests related stats
+type HTTPLimitRequests map[string]HTTPLimitRequest
+
+// LimitConnection represents Connections Limiting
+type LimitConnection struct {
+	Passed         uint64
+	Rejected       uint64
+	RejectedDryRun uint64 `json:"rejected_dry_run"`
+}
+
+// HTTPLimitConnections represents limit connections related stats
+type HTTPLimitConnections map[string]LimitConnection
+
+// StreamLimitConnections represents limit connections related stats
+type StreamLimitConnections map[string]LimitConnection
 
 // NewNginxClient creates an NginxClient with the latest supported version.
 func NewNginxClient(httpClient *http.Client, apiEndpoint string) (*NginxClient, error) {
@@ -1095,21 +1123,39 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 		return nil, fmt.Errorf("failed to get stats: %w", err)
 	}
 
+	limitReqs, err := client.GetHTTPLimitReqs()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get stats: %w", err)
+	}
+
+	limitConnsHTTP, err := client.GetHTTPConnectionsLimit()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get stats: %w", err)
+	}
+
+	limitConnsStream, err := client.GetStreamConnectionsLimit()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get stats: %w", err)
+	}
+
 	return &Stats{
-		NginxInfo:         *info,
-		Caches:            *caches,
-		Processes:         *processes,
-		Slabs:             *slabs,
-		Connections:       *cons,
-		HTTPRequests:      *requests,
-		SSL:               *ssl,
-		ServerZones:       *zones,
-		StreamServerZones: *streamZones,
-		Upstreams:         *upstreams,
-		StreamUpstreams:   *streamUpstreams,
-		StreamZoneSync:    streamZoneSync,
-		LocationZones:     *locationZones,
-		Resolvers:         *resolvers,
+		NginxInfo:              *info,
+		Caches:                 *caches,
+		Processes:              *processes,
+		Slabs:                  *slabs,
+		Connections:            *cons,
+		HTTPRequests:           *requests,
+		SSL:                    *ssl,
+		ServerZones:            *zones,
+		StreamServerZones:      *streamZones,
+		Upstreams:              *upstreams,
+		StreamUpstreams:        *streamUpstreams,
+		StreamZoneSync:         streamZoneSync,
+		LocationZones:          *locationZones,
+		Resolvers:              *resolvers,
+		HTTPLimitRequests:      *limitReqs,
+		HTTPLimitConnections:   *limitConnsHTTP,
+		StreamLimitConnections: *limitConnsStream,
 	}, nil
 }
 
@@ -1499,4 +1545,49 @@ func addPortToServer(server string) string {
 	}
 
 	return fmt.Sprintf("%v:%v", server, defaultServerPort)
+}
+
+// GetHTTPLimitReqs returns http/limit_reqs stats.
+func (client *NginxClient) GetHTTPLimitReqs() (*HTTPLimitRequests, error) {
+	var limitReqs HTTPLimitRequests
+	if client.version < 6 {
+		return &limitReqs, nil
+	}
+	err := client.get("http/limit_reqs", &limitReqs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get http limit requests: %w", err)
+	}
+	return &limitReqs, nil
+}
+
+// GetHTTPConnectionsLimit returns http/limit_conns stats.
+func (client *NginxClient) GetHTTPConnectionsLimit() (*HTTPLimitConnections, error) {
+	var limitConns HTTPLimitConnections
+	if client.version < 6 {
+		return &limitConns, nil
+	}
+	err := client.get("http/limit_conns", &limitConns)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get http connections limit: %w", err)
+	}
+	return &limitConns, nil
+}
+
+// GetStreamConnectionsLimit returns stream/limit_conns stats.
+func (client *NginxClient) GetStreamConnectionsLimit() (*StreamLimitConnections, error) {
+	var limitConns StreamLimitConnections
+	if client.version < 6 {
+		return &limitConns, nil
+	}
+	err := client.get("stream/limit_conns", &limitConns)
+	if err != nil {
+		var ie *internalError
+		if errors.As(err, &ie) {
+			if ie.Code == pathNotFoundCode {
+				return &limitConns, nil
+			}
+		}
+		return nil, fmt.Errorf("failed to get stream connections limit: %w", err)
+	}
+	return &limitConns, nil
 }
