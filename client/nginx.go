@@ -16,7 +16,7 @@ import (
 
 const (
 	// APIVersion is the default version of NGINX Plus API supported by the client.
-	APIVersion = 6
+	APIVersion = 7
 
 	pathNotFoundCode  = "PathNotFound"
 	streamContext     = true
@@ -25,7 +25,7 @@ const (
 )
 
 var (
-	supportedAPIVersions = versions{4, 5, 6}
+	supportedAPIVersions = versions{4, 5, 6, 7}
 
 	// Default values for servers in Upstreams.
 	defaultMaxConns    = 0
@@ -273,12 +273,56 @@ type StreamZoneSyncStatus struct {
 
 // Responses represents HTTP response related stats.
 type Responses struct {
+	Codes        HTTPCodes
 	Responses1xx uint64 `json:"1xx"`
 	Responses2xx uint64 `json:"2xx"`
 	Responses3xx uint64 `json:"3xx"`
 	Responses4xx uint64 `json:"4xx"`
 	Responses5xx uint64 `json:"5xx"`
 	Total        uint64
+}
+
+type HTTPCodes struct {
+	HTTPContinue              uint64 `json:"100,omitempty"`
+	HTTPSwitchingProtocols    uint64 `json:"101,omitempty"`
+	HTTPProcessing            uint64 `json:"102,omitempty"`
+	HTTPOk                    uint64 `json:"200,omitempty"`
+	HTTPCreated               uint64 `json:"201,omitempty"`
+	HTTPAccepted              uint64 `json:"202,omitempty"`
+	HTTPNoContent             uint64 `json:"204,omitempty"`
+	HTTPPartialContent        uint64 `json:"206,omitempty"`
+	HTTPSpecialResponse       uint64 `json:"300,omitempty"`
+	HTTPMovedPermanently      uint64 `json:"301,omitempty"`
+	HTTPMovedTemporarily      uint64 `json:"302,omitempty"`
+	HTTPSeeOther              uint64 `json:"303,omitempty"`
+	HTTPNotModified           uint64 `json:"304,omitempty"`
+	HTTPTemporaryRedirect     uint64 `json:"307,omitempty"`
+	HTTPBadRequest            uint64 `json:"400,omitempty"`
+	HTTPUnauthorized          uint64 `json:"401,omitempty"`
+	HTTPForbidden             uint64 `json:"403,omitempty"`
+	HTTPNotFound              uint64 `json:"404,omitempty"`
+	HTTPNotAllowed            uint64 `json:"405,omitempty"`
+	HTTPRequestTimeOut        uint64 `json:"408,omitempty"`
+	HTTPConflict              uint64 `json:"409,omitempty"`
+	HTTPLengthRequired        uint64 `json:"411,omitempty"`
+	HTTPPreconditionFailed    uint64 `json:"412,omitempty"`
+	HTTPRequestEntityTooLarge uint64 `json:"413,omitempty"`
+	HTTPRequestURITooLarge    uint64 `json:"414,omitempty"`
+	HTTPUnsupportedMediaType  uint64 `json:"415,omitempty"`
+	HTTPRangeNotSatisfiable   uint64 `json:"416,omitempty"`
+	HTTPTooManyRequests       uint64 `json:"429,omitempty"`
+	HTTPClose                 uint64 `json:"444,omitempty"`
+	HTTPRequestHeaderTooLarge uint64 `json:"494,omitempty"`
+	HTTPSCertError            uint64 `json:"495,omitempty"`
+	HTTPSNoCert               uint64 `json:"496,omitempty"`
+	HTTPToHTTPS               uint64 `json:"497,omitempty"`
+	HTTPClientClosedRequest   uint64 `json:"499,omitempty"`
+	HTTPInternalServerError   uint64 `json:"500,omitempty"`
+	HTTPNotImplemented        uint64 `json:"501,omitempty"`
+	HTTPBadGateway            uint64 `json:"502,omitempty"`
+	HTTPServiceUnavailable    uint64 `json:"503,omitempty"`
+	HTTPGatewayTimeOut        uint64 `json:"504,omitempty"`
+	HTTPInsufficientStorage   uint64 `json:"507,omitempty"`
 }
 
 // Sessions represents stream session related stats.
