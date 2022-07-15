@@ -18,6 +18,9 @@ const (
 	streamZoneSync = "zone_test_sync"
 	locationZone   = "location_test"
 	resolverMetric = "resolver_test"
+	reqZone        = "one"
+	connZone       = "addr"
+	streamConnZone = "addr_stream"
 )
 
 var (
@@ -686,6 +689,22 @@ func TestStats(t *testing.T) {
 		t.Errorf("Resolver %v not found", resolverMetric)
 	}
 
+	if reqLimit, ok := stats.HTTPLimitRequests[reqZone]; ok {
+		if reqLimit.Passed < 1 {
+			t.Errorf("HTTP Reqs limit stats missing: %v", reqLimit.Passed)
+		}
+	} else {
+		t.Errorf("HTTP Reqs limit %v not found", reqLimit)
+	}
+
+	if connLimit, ok := stats.HTTPLimitConnections[connZone]; ok {
+		if connLimit.Passed < 1 {
+			t.Errorf("HTTP Limit connections stats missing: %v", connLimit.Passed)
+		}
+	} else {
+		t.Errorf("HTTP Limit connections %v not found", connLimit)
+	}
+
 	// cleanup upstream servers
 	_, _, _, err = c.UpdateHTTPServers(upstream, []client.UpstreamServer{})
 	if err != nil {
@@ -804,6 +823,14 @@ func TestStreamStats(t *testing.T) {
 		}
 	} else {
 		t.Errorf("Stream upstream 'stream_test' not found")
+	}
+
+	if streamConnLimit, ok := stats.StreamLimitConnections[streamConnZone]; ok {
+		if streamConnLimit.Passed < 1 {
+			t.Errorf("Stream Limit connections stats missing: %v", streamConnLimit.Passed)
+		}
+	} else {
+		t.Errorf("Stream Limit connections %v not found", streamConnLimit)
 	}
 
 	// cleanup stream upstream servers
