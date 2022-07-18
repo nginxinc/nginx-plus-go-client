@@ -282,6 +282,7 @@ type Responses struct {
 	Total        uint64
 }
 
+// HTTPCodes represents HTTP response codes
 type HTTPCodes struct {
 	HTTPContinue              uint64 `json:"100,omitempty"`
 	HTTPSwitchingProtocols    uint64 `json:"101,omitempty"`
