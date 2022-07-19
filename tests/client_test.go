@@ -657,10 +657,13 @@ func TestStats(t *testing.T) {
 		if val.Requests < 1 {
 			t.Errorf("ServerZone stats missing: %v", val)
 		}
+		if val.Responses.Codes.HTTPOk < 1 {
+			t.Errorf("ServerZone response codes missing: %v", val.Responses.Codes)
+		}
 	} else {
 		t.Errorf("ServerZone 'test' not found")
 	}
-	if ups, ok := stats.Upstreams["test"]; ok {
+	if ups, ok := stats.Upstreams[upstream]; ok {
 		if len(ups.Peers) < 1 {
 			t.Errorf("upstream server not visible in stats")
 		} else {
