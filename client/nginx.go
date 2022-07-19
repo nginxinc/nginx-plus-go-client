@@ -16,7 +16,7 @@ import (
 
 const (
 	// APIVersion is the default version of NGINX Plus API supported by the client.
-	APIVersion = 7
+	APIVersion = 8
 
 	pathNotFoundCode  = "PathNotFound"
 	streamContext     = true
@@ -25,7 +25,7 @@ const (
 )
 
 var (
-	supportedAPIVersions = versions{4, 5, 6, 7}
+	supportedAPIVersions = versions{4, 5, 6, 7, 8}
 
 	// Default values for servers in Upstreams.
 	defaultMaxConns    = 0
@@ -235,6 +235,7 @@ type ServerZone struct {
 	Discarded  uint64
 	Received   uint64
 	Sent       uint64
+	SSL        SSL
 }
 
 // StreamServerZones is map of stream server zone stats by zone name.
@@ -248,6 +249,7 @@ type StreamServerZone struct {
 	Discarded   uint64
 	Received    uint64
 	Sent        uint64
+	SSL         SSL
 }
 
 // StreamZoneSync represents the sync information per each shared memory zone and the sync information per node in a cluster
@@ -373,6 +375,7 @@ type Peer struct {
 	Weight       int
 	State        string
 	Active       uint64
+	SSL          SSL
 	MaxConns     int `json:"max_conns"`
 	Requests     uint64
 	Responses    Responses
@@ -398,6 +401,7 @@ type StreamPeer struct {
 	Weight        int
 	State         string
 	Active        uint64
+	SSL           SSL
 	MaxConns      int `json:"max_conns"`
 	Connections   uint64
 	ConnectTime   int    `json:"connect_time"`
