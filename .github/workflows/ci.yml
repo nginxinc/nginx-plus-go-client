@@ -7,6 +7,8 @@ on:
     paths-ignore:
       - '**.md'
       - 'LICENSE'
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
   pull_request:
     branches:
       - main
@@ -28,9 +30,7 @@ jobs:
   build:
     name: Build Client
     runs-on: ubuntu-20.04
-    if:
-      github.event.pull_request.head.repo.full_name == 'nginxinc/nginx-plus-go-client' ||
-      github.event_name == 'push' || github.event_name == 'schedule'
+    if: ${{ github.event.repository.fork == false }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -69,3 +69,23 @@ jobs:
         run: make test
         env:
           NGINX_PLUS_VERSION: nightly
+
+  release:
+    name: Release
+    runs-on: ubuntu-20.04
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    steps:
+      - name: Publish Release Notes
+        uses: release-drafter/release-drafter@v5
+        with:
+            publish: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v3
+        with:
+          version: latest
+          args: release --rm-dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_COMMUNITY }}

@@ -1,3 +1,15 @@
+## 0.10.0 (Jul 19, 2022)
+
+An automatically generated list of changes can be found on GitHub at: [0.10.0 Release](https://github.com/nginxinc/nginx-plus-go-client/releases/tag/v0.10.0)
+
+## 0.9.0 (Sep 28, 2021)
+
+An automatically generated list of changes can be found on GitHub at: [0.9.0 Release](https://github.com/nginxinc/nginx-plus-go-client/releases/tag/v0.9.0)
+
+## 0.8.0 (Nov 26, 2020)
+
+An automatically generated list of changes can be found on GitHub at: [0.8.0 Release](https://github.com/nginxinc/nginx-plus-go-client/releases/tag/v0.8.0)
+
 ## 0.7.0 (Jul 10, 2020)
 FEATURES:
 * [38](https://github.com/nginxinc/nginx-plus-go-client/pull/38): *Support for /slabs API endpoint*. The client now supports retrieving shared memory zone usage info.
@@ -42,7 +54,7 @@ CHANGES:
 
 ## 0.3 (May 29, 2019)
 FEATURES:
-* [20](https://github.com/nginxinc/nginx-plus-go-client/pull/20): *Support for stream zone sync metrics*. The client `GetStats` method now additionally returns stream zone sync metrics. 
+* [20](https://github.com/nginxinc/nginx-plus-go-client/pull/20): *Support for stream zone sync metrics*. The client `GetStats` method now additionally returns stream zone sync metrics.
 * [13](https://github.com/nginxinc/nginx-plus-go-client/pull/13): *Support for key-value endpoints*. The client implements a set of methods to create/modify/delete key-val pairs for both http and stream contexts.
 * [12](https://github.com/nginxinc/nginx-plus-go-client/pull/12) *Support for NGINX status info*. The client `GetStats` method now additionally returns NGINX status metrics. Thanks to [jthurman42](https://github.com/jthurman42).
 

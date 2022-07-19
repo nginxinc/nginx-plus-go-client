@@ -1,0 +1,10 @@
+builds:
+  - skip: true
+
+changelog:
+  skip: true
+
+announce:
+  slack:
+    enabled: true
+    channel: '#general'
