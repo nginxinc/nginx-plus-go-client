@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"reflect"
 	"strings"
@@ -553,7 +552,7 @@ func getAPIVersions(httpClient *http.Client, endpoint string) (*versions, error)
 		return nil, fmt.Errorf("%v is not accessible: expected %v response, got %v", endpoint, http.StatusOK, resp.StatusCode)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("error while reading body of the response: %w", err)
 	}
@@ -582,7 +581,7 @@ func createResponseMismatchError(respBody io.ReadCloser) *internalError {
 }
 
 func readAPIErrorResponse(respBody io.ReadCloser) (*apiErrorResponse, error) {
-	body, err := ioutil.ReadAll(respBody)
+	body, err := io.ReadAll(respBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read the response body: %w", err)
 	}
@@ -812,7 +811,7 @@ func (client *NginxClient) get(path string, data interface{}) error {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("failed to read the response body: %w", err)
 	}
