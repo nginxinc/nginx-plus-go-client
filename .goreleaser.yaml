@@ -7,4 +7,5 @@ changelog:
 announce:
   slack:
     enabled: true
-    channel: '#general'
+    channel: '#announcements'
+    message_template: 'NGINX Plus Go Client {{ .Tag }} is out! Check it out: {{ .ReleaseURL }}'
