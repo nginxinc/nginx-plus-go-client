@@ -21,7 +21,7 @@ func TestStatsNoStream(t *testing.T) {
 
 	stats, err := c.GetStats()
 	if err != nil {
-		t.Errorf("Error getting stats: %w", err)
+		t.Errorf("Error getting stats: %v", err)
 	}
 
 	if stats.Connections.Accepted < 1 {

@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"reflect"
 	"strings"
@@ -15,7 +14,7 @@ import (
 
 const (
 	// APIVersion is the default version of NGINX Plus API supported by the client.
-	APIVersion = 5
+	APIVersion = 8
 
 	pathNotFoundCode  = "PathNotFound"
 	streamContext     = true
@@ -24,7 +23,7 @@ const (
 )
 
 var (
-	supportedAPIVersions = versions{4, 5}
+	supportedAPIVersions = versions{4, 5, 6, 7, 8}
 
 	// Default values for servers in Upstreams.
 	defaultMaxConns    = 0
@@ -115,20 +114,23 @@ func (internalError *internalError) Wrap(err string) *internalError {
 // Stats represents NGINX Plus stats fetched from the NGINX Plus API.
 // https://nginx.org/en/docs/http/ngx_http_api_module.html
 type Stats struct {
-	NginxInfo         NginxInfo
-	Caches            Caches
-	Processes         Processes
-	Connections       Connections
-	Slabs             Slabs
-	HTTPRequests      HTTPRequests
-	SSL               SSL
-	ServerZones       ServerZones
-	Upstreams         Upstreams
-	StreamServerZones StreamServerZones
-	StreamUpstreams   StreamUpstreams
-	StreamZoneSync    *StreamZoneSync
-	LocationZones     LocationZones
-	Resolvers         Resolvers
+	NginxInfo              NginxInfo
+	Caches                 Caches
+	Processes              Processes
+	Connections            Connections
+	Slabs                  Slabs
+	HTTPRequests           HTTPRequests
+	SSL                    SSL
+	ServerZones            ServerZones
+	Upstreams              Upstreams
+	StreamServerZones      StreamServerZones
+	StreamUpstreams        StreamUpstreams
+	StreamZoneSync         *StreamZoneSync
+	LocationZones          LocationZones
+	Resolvers              Resolvers
+	HTTPLimitRequests      HTTPLimitRequests
+	HTTPLimitConnections   HTTPLimitConnections
+	StreamLimitConnections StreamLimitConnections
 }
 
 // NginxInfo contains general information about NGINX Plus.
@@ -231,6 +233,7 @@ type ServerZone struct {
 	Discarded  uint64
 	Received   uint64
 	Sent       uint64
+	SSL        SSL
 }
 
 // StreamServerZones is map of stream server zone stats by zone name.
@@ -244,6 +247,7 @@ type StreamServerZone struct {
 	Discarded   uint64
 	Received    uint64
 	Sent        uint64
+	SSL         SSL
 }
 
 // StreamZoneSync represents the sync information per each shared memory zone and the sync information per node in a cluster
@@ -269,12 +273,57 @@ type StreamZoneSyncStatus struct {
 
 // Responses represents HTTP response related stats.
 type Responses struct {
+	Codes        HTTPCodes
 	Responses1xx uint64 `json:"1xx"`
 	Responses2xx uint64 `json:"2xx"`
 	Responses3xx uint64 `json:"3xx"`
 	Responses4xx uint64 `json:"4xx"`
 	Responses5xx uint64 `json:"5xx"`
 	Total        uint64
+}
+
+// HTTPCodes represents HTTP response codes
+type HTTPCodes struct {
+	HTTPContinue              uint64 `json:"100,omitempty"`
+	HTTPSwitchingProtocols    uint64 `json:"101,omitempty"`
+	HTTPProcessing            uint64 `json:"102,omitempty"`
+	HTTPOk                    uint64 `json:"200,omitempty"`
+	HTTPCreated               uint64 `json:"201,omitempty"`
+	HTTPAccepted              uint64 `json:"202,omitempty"`
+	HTTPNoContent             uint64 `json:"204,omitempty"`
+	HTTPPartialContent        uint64 `json:"206,omitempty"`
+	HTTPSpecialResponse       uint64 `json:"300,omitempty"`
+	HTTPMovedPermanently      uint64 `json:"301,omitempty"`
+	HTTPMovedTemporarily      uint64 `json:"302,omitempty"`
+	HTTPSeeOther              uint64 `json:"303,omitempty"`
+	HTTPNotModified           uint64 `json:"304,omitempty"`
+	HTTPTemporaryRedirect     uint64 `json:"307,omitempty"`
+	HTTPBadRequest            uint64 `json:"400,omitempty"`
+	HTTPUnauthorized          uint64 `json:"401,omitempty"`
+	HTTPForbidden             uint64 `json:"403,omitempty"`
+	HTTPNotFound              uint64 `json:"404,omitempty"`
+	HTTPNotAllowed            uint64 `json:"405,omitempty"`
+	HTTPRequestTimeOut        uint64 `json:"408,omitempty"`
+	HTTPConflict              uint64 `json:"409,omitempty"`
+	HTTPLengthRequired        uint64 `json:"411,omitempty"`
+	HTTPPreconditionFailed    uint64 `json:"412,omitempty"`
+	HTTPRequestEntityTooLarge uint64 `json:"413,omitempty"`
+	HTTPRequestURITooLarge    uint64 `json:"414,omitempty"`
+	HTTPUnsupportedMediaType  uint64 `json:"415,omitempty"`
+	HTTPRangeNotSatisfiable   uint64 `json:"416,omitempty"`
+	HTTPTooManyRequests       uint64 `json:"429,omitempty"`
+	HTTPClose                 uint64 `json:"444,omitempty"`
+	HTTPRequestHeaderTooLarge uint64 `json:"494,omitempty"`
+	HTTPSCertError            uint64 `json:"495,omitempty"`
+	HTTPSNoCert               uint64 `json:"496,omitempty"`
+	HTTPToHTTPS               uint64 `json:"497,omitempty"`
+	HTTPClientClosedRequest   uint64 `json:"499,omitempty"`
+	HTTPInternalServerError   uint64 `json:"500,omitempty"`
+	HTTPNotImplemented        uint64 `json:"501,omitempty"`
+	HTTPBadGateway            uint64 `json:"502,omitempty"`
+	HTTPServiceUnavailable    uint64 `json:"503,omitempty"`
+	HTTPGatewayTimeOut        uint64 `json:"504,omitempty"`
+	HTTPInsufficientStorage   uint64 `json:"507,omitempty"`
 }
 
 // Sessions represents stream session related stats.
@@ -324,6 +373,7 @@ type Peer struct {
 	Weight       int
 	State        string
 	Active       uint64
+	SSL          SSL
 	MaxConns     int `json:"max_conns"`
 	Requests     uint64
 	Responses    Responses
@@ -349,6 +399,7 @@ type StreamPeer struct {
 	Weight        int
 	State         string
 	Active        uint64
+	SSL           SSL
 	MaxConns      int `json:"max_conns"`
 	Connections   uint64
 	ConnectTime   int    `json:"connect_time"`
@@ -417,6 +468,31 @@ type Processes struct {
 	Respawned int64
 }
 
+// HTTPLimitRequest represents HTTP Requests Rate Limiting
+type HTTPLimitRequest struct {
+	Passed         uint64
+	Delayed        uint64
+	Rejected       uint64
+	DelayedDryRun  uint64 `json:"delayed_dry_run"`
+	RejectedDryRun uint64 `json:"rejected_dry_run"`
+}
+
+// HTTPLimitRequests represents limit requests related stats
+type HTTPLimitRequests map[string]HTTPLimitRequest
+
+// LimitConnection represents Connections Limiting
+type LimitConnection struct {
+	Passed         uint64
+	Rejected       uint64
+	RejectedDryRun uint64 `json:"rejected_dry_run"`
+}
+
+// HTTPLimitConnections represents limit connections related stats
+type HTTPLimitConnections map[string]LimitConnection
+
+// StreamLimitConnections represents limit connections related stats
+type StreamLimitConnections map[string]LimitConnection
+
 // NewNginxClient creates an NginxClient with the latest supported version.
 func NewNginxClient(httpClient *http.Client, apiEndpoint string) (*NginxClient, error) {
 	return NewNginxClientWithVersion(httpClient, apiEndpoint, APIVersion)
@@ -469,12 +545,13 @@ func getAPIVersions(httpClient *http.Client, endpoint string) (*versions, error)
 	if err != nil {
 		return nil, fmt.Errorf("%v is not accessible: %w", endpoint, err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("%v is not accessible: expected %v response, got %v", endpoint, http.StatusOK, resp.StatusCode)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("error while reading body of the response: %w", err)
 	}
@@ -503,7 +580,7 @@ func createResponseMismatchError(respBody io.ReadCloser) *internalError {
 }
 
 func readAPIErrorResponse(respBody io.ReadCloser) (*apiErrorResponse, error) {
-	body, err := ioutil.ReadAll(respBody)
+	body, err := io.ReadAll(respBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read the response body: %w", err)
 	}
@@ -731,8 +808,9 @@ func (client *NginxClient) get(path string, data interface{}) error {
 			"expected %v response, got %v",
 			http.StatusOK, resp.StatusCode))
 	}
+	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("failed to read the response body: %w", err)
 	}
@@ -765,6 +843,8 @@ func (client *NginxClient) post(path string, input interface{}) error {
 	if err != nil {
 		return fmt.Errorf("failed to post %v: %w", path, err)
 	}
+	defer resp.Body.Close()
+
 	if resp.StatusCode != http.StatusCreated {
 		return createResponseMismatchError(resp.Body).Wrap(fmt.Sprintf(
 			"expected %v response, got %v",
@@ -789,6 +869,8 @@ func (client *NginxClient) delete(path string, expectedStatusCode int) error {
 	if err != nil {
 		return fmt.Errorf("failed to create delete request: %w", err)
 	}
+	defer resp.Body.Close()
+
 	if resp.StatusCode != expectedStatusCode {
 		return createResponseMismatchError(resp.Body).Wrap(fmt.Sprintf(
 			"failed to complete delete request: expected %v response, got %v",
@@ -1045,7 +1127,7 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 
 	requests, err := client.GetHTTPRequests()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get stats: %w", err)
+		return nil, fmt.Errorf("failed to get stats: %w", err)
 	}
 
 	ssl, err := client.GetSSL()
@@ -1088,21 +1170,39 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 		return nil, fmt.Errorf("failed to get stats: %w", err)
 	}
 
+	limitReqs, err := client.GetHTTPLimitReqs()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get stats: %w", err)
+	}
+
+	limitConnsHTTP, err := client.GetHTTPConnectionsLimit()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get stats: %w", err)
+	}
+
+	limitConnsStream, err := client.GetStreamConnectionsLimit()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get stats: %w", err)
+	}
+
 	return &Stats{
-		NginxInfo:         *info,
-		Caches:            *caches,
-		Processes:         *processes,
-		Slabs:             *slabs,
-		Connections:       *cons,
-		HTTPRequests:      *requests,
-		SSL:               *ssl,
-		ServerZones:       *zones,
-		StreamServerZones: *streamZones,
-		Upstreams:         *upstreams,
-		StreamUpstreams:   *streamUpstreams,
-		StreamZoneSync:    streamZoneSync,
-		LocationZones:     *locationZones,
-		Resolvers:         *resolvers,
+		NginxInfo:              *info,
+		Caches:                 *caches,
+		Processes:              *processes,
+		Slabs:                  *slabs,
+		Connections:            *cons,
+		HTTPRequests:           *requests,
+		SSL:                    *ssl,
+		ServerZones:            *zones,
+		StreamServerZones:      *streamZones,
+		Upstreams:              *upstreams,
+		StreamUpstreams:        *streamUpstreams,
+		StreamZoneSync:         streamZoneSync,
+		LocationZones:          *locationZones,
+		Resolvers:              *resolvers,
+		HTTPLimitRequests:      *limitReqs,
+		HTTPLimitConnections:   *limitConnsHTTP,
+		StreamLimitConnections: *limitConnsStream,
 	}, nil
 }
 
@@ -1492,4 +1592,49 @@ func addPortToServer(server string) string {
 	}
 
 	return fmt.Sprintf("%v:%v", server, defaultServerPort)
+}
+
+// GetHTTPLimitReqs returns http/limit_reqs stats.
+func (client *NginxClient) GetHTTPLimitReqs() (*HTTPLimitRequests, error) {
+	var limitReqs HTTPLimitRequests
+	if client.version < 6 {
+		return &limitReqs, nil
+	}
+	err := client.get("http/limit_reqs", &limitReqs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get http limit requests: %w", err)
+	}
+	return &limitReqs, nil
+}
+
+// GetHTTPConnectionsLimit returns http/limit_conns stats.
+func (client *NginxClient) GetHTTPConnectionsLimit() (*HTTPLimitConnections, error) {
+	var limitConns HTTPLimitConnections
+	if client.version < 6 {
+		return &limitConns, nil
+	}
+	err := client.get("http/limit_conns", &limitConns)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get http connections limit: %w", err)
+	}
+	return &limitConns, nil
+}
+
+// GetStreamConnectionsLimit returns stream/limit_conns stats.
+func (client *NginxClient) GetStreamConnectionsLimit() (*StreamLimitConnections, error) {
+	var limitConns StreamLimitConnections
+	if client.version < 6 {
+		return &limitConns, nil
+	}
+	err := client.get("stream/limit_conns", &limitConns)
+	if err != nil {
+		var ie *internalError
+		if errors.As(err, &ie) {
+			if ie.Code == pathNotFoundCode {
+				return &limitConns, nil
+			}
+		}
+		return nil, fmt.Errorf("failed to get stream connections limit: %w", err)
+	}
+	return &limitConns, nil
 }

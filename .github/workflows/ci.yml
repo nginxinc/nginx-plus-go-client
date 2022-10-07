@@ -3,13 +3,15 @@ name: Continuous Integration
 on:
   push:
     branches:
-      - master
+      - main
     paths-ignore:
       - '**.md'
       - 'LICENSE'
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
   pull_request:
     branches:
-      - master
+      - main
     paths-ignore:
       - '**.md'
       - 'LICENSE'
@@ -28,86 +30,67 @@ jobs:
   build:
     name: Build Client
     runs-on: ubuntu-20.04
-    if:
-      github.event.pull_request.head.repo.full_name == 'nginxinc/nginx-plus-go-client' ||
-      github.event_name == 'push'
+    if: ${{ github.event.repository.fork == false }}
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v2
-      - name: Fetch Certificates
-        env:
-          CRT: ${{ secrets.NGINX_CRT }}
-          KEY: ${{ secrets.NGINX_KEY }}
-        run: |
-          echo "${CRT}" | base64 --decode > docker/nginx-repo.crt
-          echo "${KEY}" | base64 --decode > docker/nginx-repo.key
-      - name: Build & Test Client
-        if: (github.event_name != 'schedule')
-        run: make test
+        uses: actions/checkout@v3
+      - name: Determine NGINX Plus version
+        run: echo "NGINX_PLUS_VERSION=$(cat Makefile | grep -m1 NGINX_PLUS_VERSION | cut -d "=" -f2)" >> $GITHUB_ENV
       - name: Switch Repository (Nightly)
         if: (github.event_name == 'schedule')
         run: |
           sed -i 's|pkgs.nginx.com|pkgs-test.nginx.com|g' docker/Dockerfile
-          sed -i '15d' docker/Dockerfile
+          sed -i '16d' docker/Dockerfile
+          sed -i "17i sed -i 's|pkgs|pkgs-test|g' /etc/apt/apt.conf.d/90pkgs-nginx" docker/Dockerfile
           sed -i 's|deb https|deb [trusted=yes] https|g' docker/Dockerfile
           sed -i 's|nginx-plus-\${NGINX_PLUS_VERSION}|nginx-plus|g' docker/Dockerfile
-      - name: Build & Test Client (Nightly)
+          sed -i 's|\${NGINX_PLUS_VERSION^^}/||g' docker/Dockerfile
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Build Plus Docker Image
+        uses: docker/build-push-action@v3
+        with:
+          file: docker/Dockerfile
+          context: 'docker'
+          tags: nginx-plus:${{ env.NGINX_PLUS_VERSION }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          load: true
+          secrets: |
+            "nginx-repo.crt=${{ secrets.NGINX_CRT }}"
+            "nginx-repo.key=${{ secrets.NGINX_KEY }}"
+          build-args:
+            NGINX_PLUS_VERSION=${{ env.NGINX_PLUS_VERSION }}
+      - name: Test Client
+        if: (github.event_name != 'schedule')
+        run: make test
+      - name: Test Client (Nightly)
         if: (github.event_name == 'schedule')
         run: make test
         env:
           NGINX_PLUS_VERSION: nightly
 
-  notify:
-    name: Notify
+  release:
+    name: Release
     runs-on: ubuntu-20.04
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
     needs: build
-    if: always() && github.ref == 'refs/heads/master'
     steps:
-      - name: Workflow Status
-        id: check
-        uses: martialonline/workflow-status@v2
-      - name: Output Variables
-        id: commit
-        run: |
-          echo "::set-output name=sha::$(echo ${GITHUB_SHA} | cut -c1-7)"
-          echo "::set-output name=repo::$(echo ${GITHUB_REPOSITORY} | cut -d '/' -f 2)"
-      - name: Send Notification
-        uses: 8398a7/action-slack@v3
-        if:
-          steps.check.outputs.status == 'failure' ||
-          steps.check.outputs.status == 'cancelled'
+      - name: Checkout Repository
+        uses: actions/checkout@v3
         with:
-          status: custom
-          custom_payload: |
-            {
-              username: 'Github',
-              icon_emoji: ':octocat:',
-              mention: 'channel',
-              attachments: [{
-                title: '[${{ steps.commit.outputs.repo }}] ${{ github.workflow }} pipeline has failed',
-                color: '${{ steps.check.outputs.status }}' == 'failure' ? 'danger' : 'warning',
-                fields: [{
-                  title: 'Commit Hash',
-                  value: '${{ steps.commit.outputs.sha }}',
-                  short: true
-                },
-                {
-                  title: 'Author',
-                  value: '${{ github.actor }}',
-                  short: true
-                },
-                {
-                  title: 'Commit Message',
-                  value: `${{ github.event.head_commit.message }}`,
-                  short: false
-                },
-                {
-                  title: 'Pipeline URL',
-                  value: 'https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}',
-                  short: false
-                }]
-              }]
-            }
+          fetch-depth: 0
+      - name: Publish Release Notes
+        uses: release-drafter/release-drafter@v5
+        with:
+            publish: true
         env:
-          GITHUB_TOKEN: ${{ github.token }}
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v3
+        with:
+          version: latest
+          args: release --rm-dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_COMMUNITY }}
