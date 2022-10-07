@@ -18,7 +18,7 @@ RUN --mount=type=secret,id=nginx-repo.crt,dst=/etc/ssl/nginx/nginx-repo.crt,mode
     DEBIAN_VERSION=$(awk -F '=' '/^VERSION_CODENAME=/ {print $2}' /etc/os-release)
     printf "%s\n" "deb https://pkgs.nginx.com/plus/${NGINX_PLUS_VERSION^^}/debian ${DEBIAN_VERSION} nginx-plus" > /etc/apt/sources.list.d/nginx-plus.list
     apt-get update
-    apt-get install -y nginx-plus-${NGINX_PLUS_VERSION}
+    apt-get install -y nginx-plus
     apt-get remove --purge --auto-remove -y gnupg
     rm -rf /var/lib/apt/lists/*
     rm /etc/apt/apt.conf.d/90pkgs-nginx /etc/apt/sources.list.d/nginx-plus.list
