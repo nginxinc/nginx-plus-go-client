@@ -4,7 +4,6 @@
 
 We advise users to use the most recent release of NGINX Plus Go Client library. This project is not covered by the NGINX Plus support contract.
 
-
 ## Reporting a Vulnerability
 
 The F5 Security Incident Response Team (F5 SIRT) has an email alias that makes it easy to report potential security vulnerabilities.
