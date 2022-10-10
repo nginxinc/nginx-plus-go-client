@@ -1,8 +1,12 @@
 package client
 
 import (
+	"net/http"
 	"reflect"
 	"testing"
+	"time"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestDetermineUpdates(t *testing.T) {
@@ -516,5 +520,63 @@ func TestHaveSameParametersForStream(t *testing.T) {
 		if result != test.expected {
 			t.Errorf("haveSameParametersForStream(%v, %v) returned %v but expected %v", test.server, test.serverNGX, result, test.expected)
 		}
+	}
+}
+
+func TestClientFailsToCreateOnInvalidAPIVersionInput(t *testing.T) {
+	t.Parallel()
+
+	invalidAPIVersions := []int{-1, 0, 3, 9}
+	for _, v := range invalidAPIVersions {
+		_, err := NewDefaultNginxClient("test-endpoint", WithAPIVersion(v))
+		if err == nil {
+			t.Errorf("want error on using invalid API version %d, got nil", v)
+		}
+	}
+}
+
+func TestClientFailsToCreateOnInvalidInputForHTTPClient(t *testing.T) {
+	t.Parallel()
+
+	_, err := NewDefaultNginxClient("test-endpoint", WithHTTPClient(nil))
+	if err == nil {
+		t.Error("want error on using nil http client, got nil")
+	}
+}
+
+func TestClientFailsToCreateOnInvalidAPIEndpointInput(t *testing.T) {
+	t.Parallel()
+
+	_, err := NewDefaultNginxClient("")
+	if err == nil {
+		t.Error("want error on empty endpoint, got nil")
+	}
+}
+
+func TestNewCreatesDefaultClientOnValidCustomHTTPClientInput(t *testing.T) {
+	t.Parallel()
+	ht := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	client, err := NewDefaultNginxClient("test-enpoint", WithHTTPClient(ht))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cmp.Equal(ht, client.httpClient) {
+		t.Errorf(cmp.Diff(ht, client.httpClient))
+	}
+}
+
+func TestNewCreatesDefaultClientOnValidAPIVersionInput(t *testing.T) {
+	t.Parallel()
+
+	apiVer := 7
+	client, err := NewDefaultNginxClient("test-endpoint", WithAPIVersion(apiVer))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cmp.Equal(apiVer, client.version) {
+		t.Error(cmp.Diff(apiVer, client.version))
 	}
 }

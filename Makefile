@@ -10,7 +10,15 @@ export TEST_API_ENDPOINT=http://$(DOCKER_NGINX_PLUS):8080/api
 export TEST_API_ENDPOINT_OF_HELPER=http://$(DOCKER_NGINX_PLUS_HELPER):8080/api
 export TEST_UNAVAILABLE_STREAM_ADDRESS=$(DOCKER_NGINX_PLUS):8081
 
-test: run-nginx-plus test-run configure-no-stream-block test-run-no-stream-block clean
+
+test: run-nginx-plus test-run configure-no-stream-block test-run-no-stream-block clean ## Run integration tests
+
+unittest:
+	go test client/*.go -shuffle=on -race -v
+
+cover:
+	go test -shuffle=on -race -v client/*.go -count=1 -cover -covermode=atomic -coverprofile=coverage.out
+	go tool cover -html coverage.out
 
 lint:
 	docker run --pull always --rm -v $(shell pwd):/nginx-plus-go-client -w /nginx-plus-go-client -v $(shell go env GOCACHE):/cache/go -e GOCACHE=/cache/go -e GOLANGCI_LINT_CACHE=/cache/go -v $(shell go env GOPATH)/pkg:/go/pkg golangci/golangci-lint:latest golangci-lint --color always run

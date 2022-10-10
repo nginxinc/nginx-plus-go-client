@@ -21,17 +21,76 @@ This Client works against versions 4 to 8 of the NGINX Plus API. The table below
 | 7 | R25 |
 | 8 | R27 |
 
-## Using the Client
+## Using the client library
 
-1. Import `github.com/nginxinc/nginx-plus-go-client/client` into your go project.
-2. Use your favorite vendor tool to add this to your `/vendor` directory in your project.
+Import the library using:
+```go
+import "github.com/nginxinc/nginx-plus-go-client/client"
+```
+
+## Creating a client
+
+Create a new ```Client``` that works with the latest NGINX API Version:
+```go
+myHTTPClient := &http.Client{
+    Timeout: 5*time.Second
+}
+c, err := NewNginxClient(myHTTPClient, "your-api-endpoint")
+if err != nil {
+    // handle error
+}
+```
+
+Create a new ```Client``` with specified API version:
+```go
+myHTTPClient := &http.Client{
+    Timeout: 5*time.Second
+}
+
+c, err := NewNginxClientWithVersion(myHTTPClient, "your-api-endpoint", 7)
+if err != nil {
+    // handle error
+}
+```
+
+
+
+Create a new default ```Client```:
+```go
+c, err := client.NewDefaultNginxClient("your-api-endpoint")
+if err != nil {
+	// handle error
+}
+```
+Create a new default client with customized http.Client and API Version:
+```go
+myHTTPClient := &http.Client{
+	Timeout: 60 * time.Second,
+}
+
+c, err := client.NewDefaultNginxClient(
+	"your-api-endpoint",
+	client.WithHTTPClient(myHTTPClient),
+	client.WithAPIVersion(7),
+)
+if err != nil {
+	// handle error
+}
+```
+Note that:
+- default NGINX Plus Client is using ```http.Client``` with specified ```Timeout``` value of 10s
+- it is user's responsibility to provide correct NGINX API version
 
 ## Testing
 
 ### Unit tests
+Run unittests
 ```
-$ cd client
-$ go test
+$ make unittest
+```
+Run unittests with coverage report
+```
+$ make cover
 ```
 
 ### Integration tests

@@ -494,6 +494,60 @@ type HTTPLimitConnections map[string]LimitConnection
 // StreamLimitConnections represents limit connections related stats
 type StreamLimitConnections map[string]LimitConnection
 
+type option func(*NginxClient) error
+
+// WithHTTPClient configures NGINX Plus Client to use customized http.Client.
+//
+//nolint:all
+func WithHTTPClient(httpClient *http.Client) option {
+	return func(nc *NginxClient) error {
+		if httpClient == nil {
+			return errors.New("nil http client")
+		}
+		nc.httpClient = httpClient
+		return nil
+	}
+}
+
+// WithAPIVersion configures NGINX Plus Client to use a specific version of the NGINX Plus API.
+//
+//nolint:all
+func WithAPIVersion(version int) option {
+	return func(nc *NginxClient) error {
+		if !versionSupported(version) {
+			return fmt.Errorf("unsupported API version %v", version)
+		}
+		nc.version = version
+		return nil
+	}
+}
+
+// NewDefaultNginxClient creates the client for the latest NGINX plus version
+// and configured default HTTP timeout set to 10 seconds. User can configure
+// customized http.Client and supported API version by passing options.
+//
+// NewDefaultNginxClient does not perform external http request to determine
+// what NGINX version it talks to. It is responsibility of the caller to make
+// sure the library is used with supported versions.
+func NewDefaultNginxClient(apiEndpoint string, opts ...option) (*NginxClient, error) {
+	if apiEndpoint == "" {
+		return nil, errors.New("api endpoint not specified")
+	}
+	nc := NginxClient{
+		apiEndpoint: apiEndpoint,
+		httpClient: &http.Client{
+			Timeout: 10 * time.Second,
+		},
+		version: APIVersion,
+	}
+	for _, opt := range opts {
+		if err := opt(&nc); err != nil {
+			return nil, err
+		}
+	}
+	return &nc, nil
+}
+
 // NewNginxClient creates an NginxClient with the latest supported version.
 func NewNginxClient(httpClient *http.Client, apiEndpoint string) (*NginxClient, error) {
 	return NewNginxClientWithVersion(httpClient, apiEndpoint, APIVersion)

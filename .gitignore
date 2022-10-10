@@ -6,3 +6,6 @@
 .vscode
 
 dist
+
+coverage.out
+
