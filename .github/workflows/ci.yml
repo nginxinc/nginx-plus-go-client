@@ -43,7 +43,6 @@ jobs:
           sed -i '16d' docker/Dockerfile
           sed -i "17i sed -i 's|pkgs|pkgs-test|g' /etc/apt/apt.conf.d/90pkgs-nginx" docker/Dockerfile
           sed -i 's|deb https|deb [trusted=yes] https|g' docker/Dockerfile
-          sed -i 's|nginx-plus-\${NGINX_PLUS_VERSION}|nginx-plus|g' docker/Dockerfile
           sed -i 's|\${NGINX_PLUS_VERSION^^}/||g' docker/Dockerfile
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
