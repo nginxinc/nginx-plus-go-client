@@ -30,7 +30,12 @@ import "github.com/nginxinc/nginx-plus-go-client/client"
 
 ## Creating a client
 
-Create a new ```Client``` that works with the latest NGINX API Version:
+When creating a new ```client``` it is assumed that NGINX API is reachable. The ```client``` verifies API version of the running NGINX at the time of creating a new client object.
+
+If user wants to create a client without NGINX automatic version check it should use the ```NewDefaultNginxClient``` func to create the client.
+
+
+### Create a new ```Client``` that works with the latest NGINX API Version:
 ```go
 myHTTPClient := &http.Client{
     Timeout: 5*time.Second
@@ -41,7 +46,7 @@ if err != nil {
 }
 ```
 
-Create a new ```Client``` with specified API version:
+### Create a new ```Client``` with specified API version:
 ```go
 myHTTPClient := &http.Client{
     Timeout: 5*time.Second
@@ -53,16 +58,14 @@ if err != nil {
 }
 ```
 
-
-
-Create a new default ```Client```:
+### Create a new default ```Client``` that does not check NGINX API version:
 ```go
 c, err := client.NewDefaultNginxClient("your-api-endpoint")
 if err != nil {
 	// handle error
 }
 ```
-Create a new default client with customized http.Client and API Version:
+### Create a new default client with customized ```http.Client``` and API Version:
 ```go
 myHTTPClient := &http.Client{
 	Timeout: 60 * time.Second,
@@ -79,7 +82,7 @@ if err != nil {
 ```
 Note that:
 - default NGINX Plus Client is using ```http.Client``` with specified ```Timeout``` value of 10s
-- it is user's responsibility to provide correct NGINX API version
+- it is user's responsibility to provide correct NGINX API version as the ```NewDefaultNginxClient``` func does not verify the version
 
 ## Testing
 
