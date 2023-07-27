@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"net/http"
 	"testing"
 
 	"github.com/nginxinc/nginx-plus-go-client/client"
@@ -13,8 +12,7 @@ import (
 // The API returns a special error code that we can use to determine if the API
 // is misconfigured or of the stream block is missing.
 func TestStatsNoStream(t *testing.T) {
-	httpClient := &http.Client{}
-	c, err := client.NewNginxClient(httpClient, helpers.GetAPIEndpoint())
+	c, err := client.NewNginxClient(helpers.GetAPIEndpoint())
 	if err != nil {
 		t.Fatalf("Error connecting to nginx: %v", err)
 	}
