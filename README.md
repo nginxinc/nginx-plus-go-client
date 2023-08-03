@@ -49,10 +49,10 @@ go test
 
 Prerequisites:
 
-* Docker
-* golang
-* Make
-* NGINX Plus license - put `nginx-repo.crt` and `nginx-repo.key` into the `docker` folder.
+- Docker
+- golang
+- Make
+- NGINX Plus license - put `nginx-repo.crt` and `nginx-repo.key` into the `docker` folder.
 
 Run Tests:
 
