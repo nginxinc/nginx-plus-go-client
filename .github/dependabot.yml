@@ -1,14 +1,11 @@
 version: 2
 updates:
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  - package-ecosystem: github-actions
+    directory: /
     schedule:
-      interval: daily
-    reviewers:
-      - "nginxinc/kic"
-  - package-ecosystem: "docker"
-    directory: "/docker"
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /docker
     schedule:
-      interval: daily
-    reviewers:
-      - "nginxinc/kic"
+      interval: weekly

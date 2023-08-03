@@ -4,38 +4,41 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - '**.md'
-      - 'LICENSE'
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - "v[0-9]+.[0-9]+.[0-9]+"
   pull_request:
     branches:
       - main
-    paths-ignore:
-      - '**.md'
-      - 'LICENSE'
   schedule:
-    - cron:  '0 5 * * *'
+    - cron: "0 5 * * *" # runs every day at 5am UTC
 
 env:
-  DOCKER_BUILDKIT: 1
   DOCKER_NETWORK: ${{ github.run_id }}
   DOCKER_NETWORK_ALIAS: nginx-plus-test
   DOCKER_NGINX_PLUS: nginx-plus-${{ github.run_id }}
   DOCKER_NGINX_PLUS_HELPER: nginx-plus-helper-${{ github.run_id }}
 
-jobs:
+concurrency:
+  group: ${{ github.ref_name }}-ci
+  cancel-in-progress: true
 
+permissions:
+  contents: read
+
+jobs:
   build:
     name: Build Client
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write
     if: ${{ github.event.repository.fork == false }}
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+
       - name: Determine NGINX Plus version
         run: echo "NGINX_PLUS_VERSION=$(cat Makefile | grep -m1 NGINX_PLUS_VERSION | cut -d "=" -f2)" >> $GITHUB_ENV
+
       - name: Switch Repository (Nightly)
         if: (github.event_name == 'schedule')
         run: |
@@ -44,13 +47,15 @@ jobs:
           sed -i "17i sed -i 's|pkgs|pkgs-test|g' /etc/apt/apt.conf.d/90pkgs-nginx" docker/Dockerfile
           sed -i 's|deb https|deb [trusted=yes] https|g' docker/Dockerfile
           sed -i 's|\${NGINX_PLUS_VERSION^^}/||g' docker/Dockerfile
+
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@4c0219f9ac95b02789c1075625400b2acbff50b1 # v2.9.1
+
       - name: Build Plus Docker Image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825 # v4.1.1
         with:
           file: docker/Dockerfile
-          context: 'docker'
+          context: "docker"
           tags: nginx-plus:${{ env.NGINX_PLUS_VERSION }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -58,38 +63,34 @@ jobs:
           secrets: |
             "nginx-repo.crt=${{ secrets.NGINX_CRT }}"
             "nginx-repo.key=${{ secrets.NGINX_KEY }}"
-          build-args:
-            NGINX_PLUS_VERSION=${{ env.NGINX_PLUS_VERSION }}
+          build-args: NGINX_PLUS_VERSION=${{ env.NGINX_PLUS_VERSION }}
+
       - name: Test Client
         if: (github.event_name != 'schedule')
         run: make test
+
       - name: Test Client (Nightly)
         if: (github.event_name == 'schedule')
         run: make test
         env:
           NGINX_PLUS_VERSION: nightly
 
-  release:
-    name: Release
-    runs-on: ubuntu-22.04
-    if: ${{ startsWith(github.ref, 'refs/tags/') }}
-    needs: build
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+      - name: Create/Update Draft
+        uses: lucacome/draft-release@f6dc37dcdf44be100a649b72c62c628776750190 # v0.2.2
+        id: release-notes
         with:
-          fetch-depth: 0
-      - name: Publish Release Notes
-        uses: release-drafter/release-drafter@v5
-        with:
-            publish: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          minor-label: "enhancement"
+          major-label: "change"
+          publish: ${{ github.ref_type == 'tag' }}
+          collapse-after: 50
+        if: ${{ github.event_name == 'push' }}
+
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v4
+        uses: goreleaser/goreleaser-action@336e29918d653399e599bfca99fadc1d7ffbc9f7 # v4.3.0
         with:
           version: latest
-          args: release --rm-dist
+          args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_COMMUNITY }}
+        if: ${{ github.ref_type == 'tag' }}
