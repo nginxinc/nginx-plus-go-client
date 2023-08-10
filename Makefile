@@ -1,8 +1,10 @@
-NGINX_PLUS_VERSION=r29
+NGINX_PLUS_VERSION=r30
 DOCKER_NETWORK?=test
 DOCKER_NETWORK_ALIAS=nginx-plus-test
 DOCKER_NGINX_PLUS?=nginx-plus
 DOCKER_NGINX_PLUS_HELPER?=nginx-plus-helper
+NGINX_REPO_URL?=pkgs-test.nginx.com
+NGINX_CERT_DIR?=docker
 
 GOLANG_CONTAINER=golang:1.19
 
@@ -16,7 +18,7 @@ lint:
 	docker run --pull always --rm -v $(shell pwd):/nginx-plus-go-client -w /nginx-plus-go-client -v $(shell go env GOCACHE):/cache/go -e GOCACHE=/cache/go -e GOLANGCI_LINT_CACHE=/cache/go -v $(shell go env GOPATH)/pkg:/go/pkg golangci/golangci-lint:latest golangci-lint --color always run
 
 docker-build:
-	docker build --secret id=nginx-repo.crt,src=docker/nginx-repo.crt --secret id=nginx-repo.key,src=docker/nginx-repo.key --build-arg NGINX_PLUS_VERSION=$(NGINX_PLUS_VERSION) -t nginx-plus:$(NGINX_PLUS_VERSION) docker
+	docker build --secret id=nginx-repo.crt,src=${NGINX_CERT_DIR}/nginx-repo.crt --secret id=nginx-repo.key,src=${NGINX_CERT_DIR}/nginx-repo.key --build-arg NGINX_PLUS_VERSION=$(NGINX_PLUS_VERSION) --build-arg NGINX_REPO_URL=$(NGINX_REPO_URL) -t nginx-plus:$(NGINX_PLUS_VERSION) docker
 
 run-nginx-plus:
 	docker network create --driver bridge $(DOCKER_NETWORK)

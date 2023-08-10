@@ -15,7 +15,7 @@ import (
 
 const (
 	// APIVersion is the default version of NGINX Plus API supported by the client.
-	APIVersion = 8
+	APIVersion = 9
 
 	pathNotFoundCode  = "PathNotFound"
 	streamContext     = true
@@ -24,7 +24,7 @@ const (
 )
 
 var (
-	supportedAPIVersions = versions{4, 5, 6, 7, 8}
+	supportedAPIVersions = versions{4, 5, 6, 7, 8, 9}
 
 	// Default values for servers in Upstreams.
 	defaultMaxConns    = 0
@@ -132,6 +132,7 @@ type Stats struct {
 	HTTPLimitRequests      HTTPLimitRequests
 	HTTPLimitConnections   HTTPLimitConnections
 	StreamLimitConnections StreamLimitConnections
+	Workers                []*Workers
 }
 
 // NginxInfo contains general information about NGINX Plus.
@@ -493,6 +494,19 @@ type HTTPLimitConnections map[string]LimitConnection
 
 // StreamLimitConnections represents limit connections related stats
 type StreamLimitConnections map[string]LimitConnection
+
+// Workers represents worker connections related stats
+type Workers struct {
+	ID          int
+	ProcessID   uint64      `json:"pid"`
+	HTTP        WorkersHTTP `json:"http"`
+	Connections Connections
+}
+
+// WorkersHTTP represents HTTP worker connections
+type WorkersHTTP struct {
+	HTTPRequests HTTPRequests `json:"requests"`
+}
 
 // NewNginxClient creates an NginxClient with the latest supported version.
 func NewNginxClient(httpClient *http.Client, apiEndpoint string) (*NginxClient, error) {
@@ -1186,6 +1200,11 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 		return nil, fmt.Errorf("failed to get stats: %w", err)
 	}
 
+	workers, err := client.GetWorkers()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get stats: %w", err)
+	}
+
 	return &Stats{
 		NginxInfo:              *info,
 		Caches:                 *caches,
@@ -1204,6 +1223,7 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 		HTTPLimitRequests:      *limitReqs,
 		HTTPLimitConnections:   *limitConnsHTTP,
 		StreamLimitConnections: *limitConnsStream,
+		Workers:                workers,
 	}, nil
 }
 
@@ -1638,4 +1658,17 @@ func (client *NginxClient) GetStreamConnectionsLimit() (*StreamLimitConnections,
 		return nil, fmt.Errorf("failed to get stream connections limit: %w", err)
 	}
 	return &limitConns, nil
+}
+
+// GetWorkers returns workers stats.
+func (client *NginxClient) GetWorkers() ([]*Workers, error) {
+	var workers []*Workers
+	if client.version < 8 {
+		return workers, nil
+	}
+	err := client.get("workers", &workers)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get workers: %w", err)
+	}
+	return workers, nil
 }
