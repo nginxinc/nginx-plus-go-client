@@ -1,5 +1,5 @@
-# syntax=docker/dockerfile:1.4
-FROM debian:bullseye-slim
+# syntax=docker/dockerfile:1.5
+FROM debian:12-slim
 
 LABEL maintainer="NGINX Docker Maintainers <integrations@nginx.com>"
 
@@ -23,10 +23,6 @@ RUN --mount=type=secret,id=nginx-repo.crt,dst=/etc/ssl/nginx/nginx-repo.crt,mode
     rm -rf /var/lib/apt/lists/*
     rm /etc/apt/apt.conf.d/90pkgs-nginx /etc/apt/sources.list.d/nginx-plus.list
 eot
-
-# Forward request logs to Docker log collector
-RUN ln -sf /dev/stdout /var/log/nginx/access.log \
-    && ln -sf /dev/stderr /var/log/nginx/error.log
 
 EXPOSE 80
 
