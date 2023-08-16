@@ -1,0 +1,70 @@
+services:
+  nginx:
+    image: nginx-plus
+    build:
+      dockerfile: docker/Dockerfile
+      secrets:
+        - nginx-repo.crt
+        - nginx-repo.key
+    volumes:
+      - type: bind
+        source: ./docker/nginx.conf
+        target: /etc/nginx/nginx.conf
+    networks:
+      default:
+        aliases:
+          - nginx-plus-test
+
+  nginx-no-stream:
+    extends:
+      service: nginx
+    volumes:
+      - type: bind
+        source: ./docker/nginx_no_stream.conf
+        target: /etc/nginx/nginx.conf
+
+  nginx-helper:
+    extends:
+      service: nginx
+
+  test-nginx:
+    image: golang:1.21
+    volumes:
+      - type: bind
+        source: ./
+        target: /go/src/github.com/nginxinc/nginx-plus-go-client
+    working_dir: /go/src/github.com/nginxinc/nginx-plus-go-client
+    command: /bin/sh -c "go test -v -shuffle=on -race client/*"
+    depends_on:
+      - nginx
+      - nginx-helper
+    environment:
+      - TEST_API_ENDPOINT=http://nginx:8080/api
+      - TEST_API_ENDPOINT_OF_HELPER=http://nginx-helper:8080/api
+      - TEST_UNAVAILABLE_STREAM_ADDRESS=nginx:8081
+
+  test-client:
+    extends:
+      service: test-nginx
+    depends_on:
+      - nginx
+      - nginx-helper
+    command: go test -v -shuffle=on -race tests/client_test.go
+
+  test-no-stream:
+    extends:
+      service: test-nginx
+    command: go test -v -shuffle=on -race tests/client_no_stream_test.go
+    depends_on:
+      - nginx-no-stream
+      - nginx-helper
+    environment:
+      - TEST_API_ENDPOINT=http://nginx-no-stream:8080/api
+      - TEST_API_ENDPOINT_OF_HELPER=http://nginx-helper:8080/api
+      - TEST_UNAVAILABLE_STREAM_ADDRESS=nginx-no-stream:8081
+
+secrets:
+  nginx-repo.crt:
+    file: ./docker/nginx-repo.crt
+  nginx-repo.key:
+    file: ./docker/nginx-repo.key
