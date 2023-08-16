@@ -27,14 +27,14 @@ services:
     extends:
       service: nginx
 
-  test-nginx:
+  test:
     image: golang:1.21
     volumes:
       - type: bind
         source: ./
         target: /go/src/github.com/nginxinc/nginx-plus-go-client
     working_dir: /go/src/github.com/nginxinc/nginx-plus-go-client
-    command: /bin/sh -c "go test -v -shuffle=on -race client/*"
+    command: go test -v -shuffle=on -race tests/client_test.go
     depends_on:
       - nginx
       - nginx-helper
@@ -43,17 +43,9 @@ services:
       - TEST_API_ENDPOINT_OF_HELPER=http://nginx-helper:8080/api
       - TEST_UNAVAILABLE_STREAM_ADDRESS=nginx:8081
 
-  test-client:
-    extends:
-      service: test-nginx
-    depends_on:
-      - nginx
-      - nginx-helper
-    command: go test -v -shuffle=on -race tests/client_test.go
-
   test-no-stream:
     extends:
-      service: test-nginx
+      service: test
     command: go test -v -shuffle=on -race tests/client_no_stream_test.go
     depends_on:
       - nginx-no-stream
