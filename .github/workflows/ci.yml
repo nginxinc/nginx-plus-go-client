@@ -12,11 +12,9 @@ on:
   schedule:
     - cron: "0 5 * * *" # runs every day at 5am UTC
 
-env:
-  DOCKER_NETWORK: ${{ github.run_id }}
-  DOCKER_NETWORK_ALIAS: nginx-plus-test
-  DOCKER_NGINX_PLUS: nginx-plus-${{ github.run_id }}
-  DOCKER_NGINX_PLUS_HELPER: nginx-plus-helper-${{ github.run_id }}
+defaults:
+  run:
+    shell: bash
 
 concurrency:
   group: ${{ github.ref_name }}-ci
@@ -26,6 +24,25 @@ permissions:
   contents: read
 
 jobs:
+  unit-test:
+    name: Unit Test
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        go-version: ["1.19", "1.20", "1.21"]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+
+      - name: Setup Golang Environment
+        uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Run Unit Tests
+        run: make unit-test
   build:
     name: Build Client
     runs-on: ubuntu-22.04
@@ -36,9 +53,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
 
-      - name: Determine NGINX Plus version
-        run: echo "NGINX_PLUS_VERSION=$(cat Makefile | grep -m1 NGINX_PLUS_VERSION | cut -d "=" -f2)" >> $GITHUB_ENV
-
       - name: Switch Repository (Nightly)
         if: (github.event_name == 'schedule')
         run: |
@@ -46,7 +60,7 @@ jobs:
           sed -i '16d' docker/Dockerfile
           sed -i "17i sed -i 's|pkgs|pkgs-test|g' /etc/apt/apt.conf.d/90pkgs-nginx" docker/Dockerfile
           sed -i 's|deb https|deb [trusted=yes] https|g' docker/Dockerfile
-          sed -i 's|\${NGINX_PLUS_VERSION^^}/||g' docker/Dockerfile
+          sed -i 's|\${NGINX_PLUS_VERSION}/||g' docker/Dockerfile
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@4c0219f9ac95b02789c1075625400b2acbff50b1 # v2.9.1
@@ -55,25 +69,18 @@ jobs:
         uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825 # v4.1.1
         with:
           file: docker/Dockerfile
-          context: "docker"
-          tags: nginx-plus:${{ env.NGINX_PLUS_VERSION }}
+          tags: nginx-plus
           cache-from: type=gha
           cache-to: type=gha,mode=max
           load: true
           secrets: |
             "nginx-repo.crt=${{ secrets.NGINX_CRT }}"
             "nginx-repo.key=${{ secrets.NGINX_KEY }}"
-          build-args: NGINX_PLUS_VERSION=${{ env.NGINX_PLUS_VERSION }}
 
       - name: Test Client
-        if: (github.event_name != 'schedule')
-        run: make test
-
-      - name: Test Client (Nightly)
-        if: (github.event_name == 'schedule')
-        run: make test
-        env:
-          NGINX_PLUS_VERSION: nightly
+        run: |
+          docker compose up -d
+          docker compose logs -f test test-no-stream
 
       - name: Create/Update Draft
         uses: lucacome/draft-release@f6dc37dcdf44be100a649b72c62c628776750190 # v0.2.2
