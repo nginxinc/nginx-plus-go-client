@@ -1663,7 +1663,7 @@ func (client *NginxClient) GetStreamConnectionsLimit() (*StreamLimitConnections,
 // GetWorkers returns workers stats.
 func (client *NginxClient) GetWorkers() ([]*Workers, error) {
 	var workers []*Workers
-	if client.version < 8 {
+	if client.version < 9 {
 		return workers, nil
 	}
 	err := client.get("workers", &workers)
