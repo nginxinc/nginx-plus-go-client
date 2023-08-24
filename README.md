@@ -30,6 +30,7 @@ the API was first introduced.
 | 6 | R20 |
 | 7 | R25 |
 | 8 | R27 |
+| 9 | R30 |
 
 ## Using the Client
 

@@ -627,6 +627,10 @@ func TestStats(t *testing.T) {
 		t.Errorf("Bad connections: %v", stats.Connections)
 	}
 
+	if len(stats.Workers) < 1 {
+		t.Errorf("Bad workers: %v", stats.Workers)
+	}
+
 	if val, ok := stats.Caches[cacheZone]; ok {
 		if val.MaxSize != 104857600 { // 100MiB
 			t.Errorf("Cache max size stats missing: %v", val.Size)
