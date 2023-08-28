@@ -20,7 +20,7 @@ functions.
 
 ## Compatibility
 
-This Client works against versions 4 to 8 of the NGINX Plus API. The table below shows the version of NGINX Plus where
+This Client works against versions 4 to 9 of the NGINX Plus API. The table below shows the version of NGINX Plus where
 the API was first introduced.
 
 | API version | NGINX Plus version |
