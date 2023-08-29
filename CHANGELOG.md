@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.11.0 (Aug 29, 2023)
+
+An automatically generated list of changes can be found on GitHub at: [0.10.0 Release](https://github.com/nginxinc/nginx-plus-go-client/releases/tag/v0.10.0)
+
 ## 0.10.0 (Jul 19, 2022)
 
 An automatically generated list of changes can be found on GitHub at: [0.10.0 Release](https://github.com/nginxinc/nginx-plus-go-client/releases/tag/v0.10.0)
