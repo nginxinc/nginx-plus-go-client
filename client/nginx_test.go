@@ -1,6 +1,8 @@
 package client
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"testing"
 )
@@ -516,5 +518,74 @@ func TestHaveSameParametersForStream(t *testing.T) {
 		if result != test.expected {
 			t.Errorf("haveSameParametersForStream(%v, %v) returned %v but expected %v", test.server, test.serverNGX, result, test.expected)
 		}
+	}
+}
+
+func TestClientWithCheckAPI(t *testing.T) {
+	// Create a test server that returns supported API versions
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := w.Write([]byte(`[4, 5, 6, 7]`))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	}))
+	defer ts.Close()
+
+	// Test creating a new client with a supported API version on the server
+	client, err := NewNginxClient(ts.URL, WithAPIVersion(7), WithCheckAPI())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if client == nil {
+		t.Fatalf("client is nil")
+	}
+
+	// Test creating a new client with an unsupported API version on the server
+	client, err = NewNginxClient(ts.URL, WithAPIVersion(8), WithCheckAPI())
+	if err == nil {
+		t.Fatalf("expected error, but got nil")
+	}
+	if client != nil {
+		t.Fatalf("expected client to be nil, but got %v", client)
+	}
+}
+
+func TestClientWithAPIVersion(t *testing.T) {
+	// Test creating a new client with a supported API version on the client
+	client, err := NewNginxClient("http://api-url", WithAPIVersion(8))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if client == nil {
+		t.Fatalf("client is nil")
+	}
+
+	// Test creating a new client with an unsupported API version on the client
+	client, err = NewNginxClient("http://api-url", WithAPIVersion(3))
+	if err == nil {
+		t.Fatalf("expected error, but got nil")
+	}
+	if client != nil {
+		t.Fatalf("expected client to be nil, but got %v", client)
+	}
+}
+
+func TestClientWithHTTPClient(t *testing.T) {
+	// Test creating a new client passing a custom HTTP client
+	client, err := NewNginxClient("http://api-url", WithHTTPClient(&http.Client{}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if client == nil {
+		t.Fatalf("client is nil")
+	}
+
+	// Test creating a new client passing a nil HTTP client
+	client, err = NewNginxClient("http://api-url", WithHTTPClient(nil))
+	if err == nil {
+		t.Fatalf("expected error, but got nil")
+	}
+	if client != nil {
+		t.Fatalf("expected client to be nil, but got %v", client)
 	}
 }
