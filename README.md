@@ -8,6 +8,8 @@
 [![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/nginxinc/nginx-plus-go-client?logo=github&sort=semver)](https://github.com/nginxinc/nginx-plus-go-client/releases/latest)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/nginxinc/nginx-plus-go-client?logo=go)
 [![Slack](https://img.shields.io/badge/slack-nginxcommunity-green?logo=slack)](https://nginxcommunity.slack.com)
+[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
+[![Community Support](https://badgen.net/badge/support/community/cyan?icon=awesome)](https://github.com/nginxinc/nginx-plus-go-client/blob/main/SECURITY.md)
 
 # NGINX Plus Go Client
 
@@ -51,6 +53,7 @@ go test
 Prerequisites:
 
 - Docker
+- Docker Compose
 - golang
 - Make
 - NGINX Plus license - put `nginx-repo.crt` and `nginx-repo.key` into the `docker` folder.
@@ -58,7 +61,7 @@ Prerequisites:
 Run Tests:
 
 ```console
-make docker-build && make test
+make test
 ```
 
 This will build and run two NGINX Plus containers and create one docker network of type bridge, execute the client tests
