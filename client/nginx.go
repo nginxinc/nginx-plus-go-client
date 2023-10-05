@@ -11,6 +11,8 @@ import (
 	"reflect"
 	"strings"
 	"time"
+
+	"golang.org/x/exp/slices"
 )
 
 const (
@@ -1149,6 +1151,11 @@ func determineStreamUpdates(updatedServers []StreamUpstreamServer, nginxServers 
 
 // GetStats gets process, slab, connection, request, ssl, zone, stream zone, upstream and stream upstream related stats from the NGINX Plus API.
 func (client *NginxClient) GetStats() (*Stats, error) {
+	endpoints, err := client.GetAvailableEndpoint()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get stats: %w", err)
+	}
+
 	info, err := client.GetNginxInfo()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get stats: %w", err)
@@ -1194,21 +1201,6 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 		return nil, fmt.Errorf("failed to get stats: %w", err)
 	}
 
-	streamZones, err := client.GetStreamServerZones()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %w", err)
-	}
-
-	streamUpstreams, err := client.GetStreamUpstreams()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %w", err)
-	}
-
-	streamZoneSync, err := client.GetStreamZoneSync()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %w", err)
-	}
-
 	locationZones, err := client.GetLocationZones()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get stats: %w", err)
@@ -1229,14 +1221,49 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 		return nil, fmt.Errorf("failed to get stats: %w", err)
 	}
 
-	limitConnsStream, err := client.GetStreamConnectionsLimit()
+	workers, err := client.GetWorkers()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get stats: %w", err)
 	}
 
-	workers, err := client.GetWorkers()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %w", err)
+	streamZones := &StreamServerZones{}
+	streamUpstreams := &StreamUpstreams{}
+	limitConnsStream := &StreamLimitConnections{}
+	streamZoneSync := &StreamZoneSync{}
+
+	if slices.Contains(endpoints, "stream") {
+		streamEndpoints, err := client.GetAvailableStreamEndpoint()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get stats: %w", err)
+		}
+
+		if slices.Contains(streamEndpoints, "server_zones") {
+			streamZones, err = client.GetStreamServerZones()
+			if err != nil {
+				return nil, fmt.Errorf("failed to get stats: %w", err)
+			}
+		}
+
+		if slices.Contains(streamEndpoints, "upstreams") {
+			streamUpstreams, err = client.GetStreamUpstreams()
+			if err != nil {
+				return nil, fmt.Errorf("failed to get stats: %w", err)
+			}
+		}
+
+		if slices.Contains(streamEndpoints, "limit_conns") {
+			limitConnsStream, err = client.GetStreamConnectionsLimit()
+			if err != nil {
+				return nil, fmt.Errorf("failed to get stats: %w", err)
+			}
+		}
+
+		if slices.Contains(streamEndpoints, "zone_sync") {
+			streamZoneSync, err = client.GetStreamZoneSync()
+			if err != nil {
+				return nil, fmt.Errorf("failed to get stats: %w", err)
+			}
+		}
 	}
 
 	return &Stats{
@@ -1259,6 +1286,26 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 		StreamLimitConnections: *limitConnsStream,
 		Workers:                workers,
 	}, nil
+}
+
+// GetAvailableEndpoint returns available endpoints in the API.
+func (client *NginxClient) GetAvailableEndpoint() ([]string, error) {
+	var endpoints []string
+	err := client.get("", &endpoints)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get endpoints: %w", err)
+	}
+	return endpoints, nil
+}
+
+// GetAvailableStreamEndpoint returns available stream endpoints in the API.
+func (client *NginxClient) GetAvailableStreamEndpoint() ([]string, error) {
+	var endpoints []string
+	err := client.get("stream", &endpoints)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get endpoints: %w", err)
+	}
+	return endpoints, nil
 }
 
 // GetNginxInfo returns Nginx stats.
