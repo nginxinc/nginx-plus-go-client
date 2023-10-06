@@ -9,10 +9,9 @@ import (
 	"io"
 	"net/http"
 	"reflect"
+	"slices"
 	"strings"
 	"time"
-
-	"slices"
 )
 
 const (
