@@ -29,9 +29,6 @@ jobs:
     runs-on: ubuntu-22.04
     permissions:
       contents: read
-    strategy:
-      matrix:
-        go-version: ["1.19", "1.20", "1.21"]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
@@ -39,7 +36,7 @@ jobs:
       - name: Setup Golang Environment
         uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version-file: go.mod
 
       - name: Run Unit Tests
         run: make unit-test
