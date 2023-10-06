@@ -1151,7 +1151,7 @@ func determineStreamUpdates(updatedServers []StreamUpstreamServer, nginxServers 
 
 // GetStats gets process, slab, connection, request, ssl, zone, stream zone, upstream and stream upstream related stats from the NGINX Plus API.
 func (client *NginxClient) GetStats() (*Stats, error) {
-	endpoints, err := client.GetAvailableEndpoint()
+	endpoints, err := client.GetAvailableEndpoints()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get stats: %w", err)
 	}
@@ -1232,7 +1232,7 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 	streamZoneSync := &StreamZoneSync{}
 
 	if slices.Contains(endpoints, "stream") {
-		streamEndpoints, err := client.GetAvailableStreamEndpoint()
+		streamEndpoints, err := client.GetAvailableStreamEndpoints()
 		if err != nil {
 			return nil, fmt.Errorf("failed to get stats: %w", err)
 		}
@@ -1288,8 +1288,8 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 	}, nil
 }
 
-// GetAvailableEndpoint returns available endpoints in the API.
-func (client *NginxClient) GetAvailableEndpoint() ([]string, error) {
+// GetAvailableEndpoints returns available endpoints in the API.
+func (client *NginxClient) GetAvailableEndpoints() ([]string, error) {
 	var endpoints []string
 	err := client.get("", &endpoints)
 	if err != nil {
@@ -1298,8 +1298,8 @@ func (client *NginxClient) GetAvailableEndpoint() ([]string, error) {
 	return endpoints, nil
 }
 
-// GetAvailableStreamEndpoint returns available stream endpoints in the API.
-func (client *NginxClient) GetAvailableStreamEndpoint() ([]string, error) {
+// GetAvailableStreamEndpoints returns available stream endpoints in the API.
+func (client *NginxClient) GetAvailableStreamEndpoints() ([]string, error) {
 	var endpoints []string
 	err := client.get("stream", &endpoints)
 	if err != nil {
