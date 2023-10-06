@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -587,5 +588,56 @@ func TestClientWithHTTPClient(t *testing.T) {
 	}
 	if client != nil {
 		t.Fatalf("expected client to be nil, but got %v", client)
+	}
+}
+
+func TestGetStats_NoStreamEndpoint(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.RequestURI == "/" {
+			_, err := w.Write([]byte(`[4, 5, 6, 7]`))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		} else if r.RequestURI == "/7/" {
+			_, err := w.Write([]byte(`["nginx","processes","connections","slabs","http","resolvers","ssl"]`))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		} else if strings.HasPrefix(r.RequestURI, "/7/stream") {
+			t.Fatal("Stream endpoint should not be called since it does not exist.")
+		} else {
+			_, err := w.Write([]byte(`{}`))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		}
+	}))
+	defer ts.Close()
+
+	// Test creating a new client with a supported API version on the server
+	client, err := NewNginxClient(ts.URL, WithAPIVersion(7), WithCheckAPI())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if client == nil {
+		t.Fatalf("client is nil")
+	}
+
+	stats, err := client.GetStats()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !reflect.DeepEqual(stats.StreamServerZones, StreamServerZones{}) {
+		t.Fatalf("StreamServerZones: expected %v, actual %v", StreamServerZones{}, stats.StreamServerZones)
+	}
+	if !reflect.DeepEqual(stats.StreamLimitConnections, StreamLimitConnections{}) {
+		t.Fatalf("StreamLimitConnections: expected %v, actual %v", StreamLimitConnections{}, stats.StreamLimitConnections)
+	}
+	if !reflect.DeepEqual(stats.StreamUpstreams, StreamUpstreams{}) {
+		t.Fatalf("StreamUpstreams: expected %v, actual %v", StreamUpstreams{}, stats.StreamUpstreams)
+	}
+	if !reflect.DeepEqual(stats.StreamZoneSync, &StreamZoneSync{}) {
+		t.Fatalf("StreamZoneSync: expected %v, actual %v", &StreamZoneSync{}, stats.StreamZoneSync)
 	}
 }
