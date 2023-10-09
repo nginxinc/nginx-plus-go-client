@@ -1,24 +1,6 @@
 # Changelog
 
-## 1.0.0 (Sep 19, 2023)
-
-An automatically generated list of changes can be found on GitHub at: [1.0.0 Release](https://github.com/nginxinc/nginx-plus-go-client/releases/tag/v1.0.0)
-
-## 0.11.0 (Aug 29, 2023)
-
-An automatically generated list of changes can be found on GitHub at: [0.11.0 Release](https://github.com/nginxinc/nginx-plus-go-client/releases/tag/v0.11.0)
-
-## 0.10.0 (Jul 19, 2022)
-
-An automatically generated list of changes can be found on GitHub at: [0.10.0 Release](https://github.com/nginxinc/nginx-plus-go-client/releases/tag/v0.10.0)
-
-## 0.9.0 (Sep 28, 2021)
-
-An automatically generated list of changes can be found on GitHub at: [0.9.0 Release](https://github.com/nginxinc/nginx-plus-go-client/releases/tag/v0.9.0)
-
-## 0.8.0 (Nov 26, 2020)
-
-An automatically generated list of changes can be found on GitHub at: [0.8.0 Release](https://github.com/nginxinc/nginx-plus-go-client/releases/tag/v0.8.0)
+Starting with version 0.8.0, an automatically generated list of changes can be found on the [GitHub Releases page](https://github.com/nginxinc/nginx-plus-go-client/releases).
 
 ## 0.7.0 (Jul 10, 2020)
 
