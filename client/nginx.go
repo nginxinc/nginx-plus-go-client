@@ -224,8 +224,21 @@ type HTTPRequests struct {
 // SSL represents SSL related stats.
 type SSL struct {
 	Handshakes       uint64
-	HandshakesFailed uint64 `json:"handshakes_failed"`
-	SessionReuses    uint64 `json:"session_reuses"`
+	HandshakesFailed uint64         `json:"handshakes_failed"`
+	SessionReuses    uint64         `json:"session_reuses"`
+	NoCommonProtocol uint64         `json:"no_common_protocol"`
+	NoCommonCipher   uint64         `json:"no_common_cipher"`
+	HandshakeTimeout uint64         `json:"handshake_timeout"`
+	PeerRejectedCert uint64         `json:"peer_rejected_cert"`
+	VerifyFailures   VerifyFailures `json:"verify_failures"`
+}
+
+type VerifyFailures struct {
+	NoCert           uint64 `json:"no_cert"`
+	ExpiredCert      uint64 `json:"expired_cert"`
+	RevokedCert      uint64 `json:"revoked_cert"`
+	HostnameMismatch uint64 `json:"hostname_mismatch"`
+	Other            uint64 `json:"other"`
 }
 
 // ServerZones is map of server zone stats by zone name
