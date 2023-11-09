@@ -525,7 +525,7 @@ func TestHaveSameParametersForStream(t *testing.T) {
 func TestClientWithCheckAPI(t *testing.T) {
 	// Create a test server that returns supported API versions
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, err := w.Write([]byte(`[4, 5, 6, 7]`))
+		_, err := w.Write([]byte(`[4, 5, 6, 7, 8, 9]`))
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -542,7 +542,7 @@ func TestClientWithCheckAPI(t *testing.T) {
 	}
 
 	// Test creating a new client with an unsupported API version on the server
-	client, err = NewNginxClient(ts.URL, WithAPIVersion(8), WithCheckAPI())
+	client, err = NewNginxClient(ts.URL, WithAPIVersion(3), WithCheckAPI())
 	if err == nil {
 		t.Fatalf("expected error, but got nil")
 	}
@@ -594,7 +594,7 @@ func TestClientWithHTTPClient(t *testing.T) {
 func TestGetStats_NoStreamEndpoint(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.RequestURI == "/" {
-			_, err := w.Write([]byte(`[4, 5, 6, 7]`))
+			_, err := w.Write([]byte(`[4, 5, 6, 7, 8, 9]`))
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -639,5 +639,82 @@ func TestGetStats_NoStreamEndpoint(t *testing.T) {
 	}
 	if !reflect.DeepEqual(stats.StreamZoneSync, &StreamZoneSync{}) {
 		t.Fatalf("StreamZoneSync: expected %v, actual %v", &StreamZoneSync{}, stats.StreamZoneSync)
+	}
+}
+
+func TestGetStats_SSL(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.RequestURI == "/" {
+			_, err := w.Write([]byte(`[4, 5, 6, 7, 8, 9]`))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		} else if r.RequestURI == "/8/" {
+			_, err := w.Write([]byte(`["nginx","processes","connections","slabs","http","resolvers","ssl","workers"]`))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		} else if strings.HasPrefix(r.RequestURI, "/8/ssl") {
+			_, err := w.Write([]byte(`{
+				"handshakes" : 79572,
+				"handshakes_failed" : 21025,
+				"session_reuses" : 15762,
+				"no_common_protocol" : 4,
+				"no_common_cipher" : 2,
+				"handshake_timeout" : 0,
+				"peer_rejected_cert" : 0,
+				"verify_failures" : {
+				  "no_cert" : 0,
+				  "expired_cert" : 2,
+				  "revoked_cert" : 1,
+				  "hostname_mismatch" : 2,
+				  "other" : 1
+				}
+			  }`))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		} else {
+			_, err := w.Write([]byte(`{}`))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		}
+	}))
+	defer ts.Close()
+
+	// Test creating a new client with a supported API version on the server
+	client, err := NewNginxClient(ts.URL, WithAPIVersion(8), WithCheckAPI())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if client == nil {
+		t.Fatalf("client is nil")
+	}
+
+	stats, err := client.GetStats()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	testStats := SSL{
+		Handshakes:       79572,
+		HandshakesFailed: 21025,
+		SessionReuses:    15762,
+		NoCommonProtocol: 4,
+		NoCommonCipher:   2,
+		HandshakeTimeout: 0,
+		PeerRejectedCert: 0,
+		VerifyFailures: VerifyFailures{
+			NoCert:           0,
+			ExpiredCert:      2,
+			RevokedCert:      1,
+			HostnameMismatch: 2,
+			Other:            1,
+		},
+	}
+
+	if !reflect.DeepEqual(stats.SSL, testStats) {
+		t.Fatalf("SSL stats: expected %v, actual %v", testStats, stats.SSL)
 	}
 }
