@@ -80,9 +80,10 @@ jobs:
             "nginx-repo.key=${{ secrets.NGINX_KEY }}"
 
       - name: Test Client
-        run: |
-          docker compose up -d
-          docker compose logs -f test test-no-stream
+        run: docker compose up test --exit-code-from test
+
+      - name: Test Client No Stream
+        run: docker compose up test-no-stream --exit-code-from test-no-stream
 
       - name: Create/Update Draft
         uses: lucacome/draft-release@52f02d1a69b61568e54ab5cf86ce91503bac4066 # v1.0.2
