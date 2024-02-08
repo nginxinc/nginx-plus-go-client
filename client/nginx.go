@@ -560,7 +560,7 @@ func NewNginxClient(apiEndpoint string, opts ...Option) (*NginxClient, error) {
 	}
 
 	if c.httpClient == nil {
-		return nil, fmt.Errorf("http client is not set")
+		return nil, errors.New("http client is not set")
 	}
 
 	if !versionSupported(c.apiVersion) {
@@ -1510,7 +1510,7 @@ func (client *NginxClient) getKeyValPairs(zone string, stream bool) (KeyValPairs
 		base = "stream"
 	}
 	if zone == "" {
-		return nil, fmt.Errorf("zone required")
+		return nil, errors.New("zone required")
 	}
 
 	path := fmt.Sprintf("%v/keyvals/%v", base, zone)
@@ -1563,7 +1563,7 @@ func (client *NginxClient) addKeyValPair(zone string, key string, val string, st
 		base = "stream"
 	}
 	if zone == "" {
-		return fmt.Errorf("zone required")
+		return errors.New("zone required")
 	}
 
 	path := fmt.Sprintf("%v/keyvals/%v", base, zone)
@@ -1591,7 +1591,7 @@ func (client *NginxClient) modifyKeyValPair(zone string, key string, val string,
 		base = "stream"
 	}
 	if zone == "" {
-		return fmt.Errorf("zone required")
+		return errors.New("zone required")
 	}
 
 	path := fmt.Sprintf("%v/keyvals/%v", base, zone)
@@ -1621,7 +1621,7 @@ func (client *NginxClient) deleteKeyValuePair(zone string, key string, stream bo
 		base = "stream"
 	}
 	if zone == "" {
-		return fmt.Errorf("zone required")
+		return errors.New("zone required")
 	}
 
 	// map[string]string can't have a nil value so we use a different type here.
@@ -1652,7 +1652,7 @@ func (client *NginxClient) deleteKeyValPairs(zone string, stream bool) error {
 		base = "stream"
 	}
 	if zone == "" {
-		return fmt.Errorf("zone required")
+		return errors.New("zone required")
 	}
 
 	path := fmt.Sprintf("%v/keyvals/%v", base, zone)
