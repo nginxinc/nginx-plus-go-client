@@ -1241,7 +1241,7 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 	streamZones := &StreamServerZones{}
 	streamUpstreams := &StreamUpstreams{}
 	limitConnsStream := &StreamLimitConnections{}
-	streamZoneSync := &StreamZoneSync{}
+	var streamZoneSync *StreamZoneSync
 
 	if slices.Contains(endpoints, "stream") {
 		streamEndpoints, err := client.GetAvailableStreamEndpoints()

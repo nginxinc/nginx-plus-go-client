@@ -637,8 +637,8 @@ func TestGetStats_NoStreamEndpoint(t *testing.T) {
 	if !reflect.DeepEqual(stats.StreamUpstreams, StreamUpstreams{}) {
 		t.Fatalf("StreamUpstreams: expected %v, actual %v", StreamUpstreams{}, stats.StreamUpstreams)
 	}
-	if !reflect.DeepEqual(stats.StreamZoneSync, &StreamZoneSync{}) {
-		t.Fatalf("StreamZoneSync: expected %v, actual %v", &StreamZoneSync{}, stats.StreamZoneSync)
+	if stats.StreamZoneSync != nil {
+		t.Fatalf("StreamZoneSync: expected %v, actual %v", nil, stats.StreamZoneSync)
 	}
 }
 
