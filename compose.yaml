@@ -14,7 +14,8 @@ services:
       default:
         aliases:
           - nginx-plus-test
-
+    ports:
+      - 8080
   nginx-no-stream:
     extends:
       service: nginx
