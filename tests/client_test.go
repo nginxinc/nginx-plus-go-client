@@ -48,7 +48,6 @@ func TestStreamClient(t *testing.T) {
 	// test adding a stream server
 
 	err = c.AddStreamServer(streamUpstream, streamServer)
-
 	if err != nil {
 		t.Fatalf("Error when adding a server: %v", err)
 	}
@@ -211,7 +210,6 @@ func TestStreamClient(t *testing.T) {
 	// updating with 2 new servers, 1 existing
 
 	added, deleted, updated, err = c.UpdateStreamServers(streamUpstream, streamServers2)
-
 	if err != nil {
 		t.Fatalf("Error when updating servers: %v", err)
 	}
@@ -228,7 +226,6 @@ func TestStreamClient(t *testing.T) {
 	// updating with zero servers - removing
 
 	added, deleted, updated, err = c.UpdateStreamServers(streamUpstream, []client.StreamUpstreamServer{})
-
 	if err != nil {
 		t.Fatalf("Error when updating servers: %v", err)
 	}
@@ -326,7 +323,6 @@ func TestClient(t *testing.T) {
 	// test adding a http server
 
 	err = c.AddHTTPServer(upstream, server)
-
 	if err != nil {
 		t.Fatalf("Error when adding a server: %v", err)
 	}
@@ -391,7 +387,6 @@ func TestClient(t *testing.T) {
 	// updating with the same servers
 
 	added, deleted, updated, err = c.UpdateHTTPServers(upstream, servers1)
-
 	if err != nil {
 		t.Fatalf("Error when updating servers: %v", err)
 	}
@@ -484,7 +479,6 @@ func TestClient(t *testing.T) {
 	// updating with 2 new servers, 1 existing
 
 	added, deleted, updated, err = c.UpdateHTTPServers(upstream, servers2)
-
 	if err != nil {
 		t.Fatalf("Error when updating servers: %v", err)
 	}
@@ -501,7 +495,6 @@ func TestClient(t *testing.T) {
 	// updating with zero servers - removing
 
 	added, deleted, updated, err = c.UpdateHTTPServers(upstream, []client.UpstreamServer{})
-
 	if err != nil {
 		t.Fatalf("Error when updating servers: %v", err)
 	}
