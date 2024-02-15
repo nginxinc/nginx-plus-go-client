@@ -524,7 +524,7 @@ func TestHaveSameParametersForStream(t *testing.T) {
 
 func TestClientWithCheckAPI(t *testing.T) {
 	// Create a test server that returns supported API versions
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, err := w.Write([]byte(`[4, 5, 6, 7, 8, 9]`))
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
