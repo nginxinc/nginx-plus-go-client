@@ -42,9 +42,9 @@ var ErrUnsupportedVer = errors.New("API version of the client is not supported b
 
 // NginxClient lets you access NGINX Plus API.
 type NginxClient struct {
-	apiVersion  int
-	apiEndpoint string
 	httpClient  *http.Client
+	apiEndpoint string
+	apiVersion  int
 	checkAPI    bool
 }
 
@@ -54,38 +54,38 @@ type versions []int
 
 // UpstreamServer lets you configure HTTP upstreams.
 type UpstreamServer struct {
-	ID          int    `json:"id,omitempty"`
-	Server      string `json:"server"`
 	MaxConns    *int   `json:"max_conns,omitempty"`
 	MaxFails    *int   `json:"max_fails,omitempty"`
+	Backup      *bool  `json:"backup,omitempty"`
+	Down        *bool  `json:"down,omitempty"`
+	Weight      *int   `json:"weight,omitempty"`
+	Server      string `json:"server"`
 	FailTimeout string `json:"fail_timeout,omitempty"`
 	SlowStart   string `json:"slow_start,omitempty"`
 	Route       string `json:"route,omitempty"`
-	Backup      *bool  `json:"backup,omitempty"`
-	Down        *bool  `json:"down,omitempty"`
-	Drain       bool   `json:"drain,omitempty"`
-	Weight      *int   `json:"weight,omitempty"`
 	Service     string `json:"service,omitempty"`
+	ID          int    `json:"id,omitempty"`
+	Drain       bool   `json:"drain,omitempty"`
 }
 
 // StreamUpstreamServer lets you configure Stream upstreams.
 type StreamUpstreamServer struct {
-	ID          int    `json:"id,omitempty"`
-	Server      string `json:"server"`
 	MaxConns    *int   `json:"max_conns,omitempty"`
 	MaxFails    *int   `json:"max_fails,omitempty"`
-	FailTimeout string `json:"fail_timeout,omitempty"`
-	SlowStart   string `json:"slow_start,omitempty"`
 	Backup      *bool  `json:"backup,omitempty"`
 	Down        *bool  `json:"down,omitempty"`
 	Weight      *int   `json:"weight,omitempty"`
+	Server      string `json:"server"`
+	FailTimeout string `json:"fail_timeout,omitempty"`
+	SlowStart   string `json:"slow_start,omitempty"`
 	Service     string `json:"service,omitempty"`
+	ID          int    `json:"id,omitempty"`
 }
 
 type apiErrorResponse struct {
-	Error     apiError
 	RequestID string `json:"request_id"`
 	Href      string
+	Error     apiError
 }
 
 func (resp *apiErrorResponse) toString() string {
@@ -94,14 +94,14 @@ func (resp *apiErrorResponse) toString() string {
 }
 
 type apiError struct {
-	Status int
 	Text   string
 	Code   string
+	Status int
 }
 
 type internalError struct {
-	apiError
 	err string
+	apiError
 }
 
 // Error allows internalError to match the Error interface.
@@ -119,24 +119,24 @@ func (internalError *internalError) Wrap(err string) *internalError {
 // Stats represents NGINX Plus stats fetched from the NGINX Plus API.
 // https://nginx.org/en/docs/http/ngx_http_api_module.html
 type Stats struct {
-	NginxInfo              NginxInfo
-	Caches                 Caches
-	Processes              Processes
-	Connections            Connections
-	Slabs                  Slabs
-	HTTPRequests           HTTPRequests
-	SSL                    SSL
-	ServerZones            ServerZones
 	Upstreams              Upstreams
+	ServerZones            ServerZones
 	StreamServerZones      StreamServerZones
 	StreamUpstreams        StreamUpstreams
-	StreamZoneSync         *StreamZoneSync
-	LocationZones          LocationZones
-	Resolvers              Resolvers
-	HTTPLimitRequests      HTTPLimitRequests
+	Slabs                  Slabs
+	Caches                 Caches
 	HTTPLimitConnections   HTTPLimitConnections
 	StreamLimitConnections StreamLimitConnections
+	HTTPLimitRequests      HTTPLimitRequests
+	Resolvers              Resolvers
+	LocationZones          LocationZones
+	StreamZoneSync         *StreamZoneSync
 	Workers                []*Workers
+	NginxInfo              NginxInfo
+	SSL                    SSL
+	Connections            Connections
+	HTTPRequests           HTTPRequests
+	Processes              Processes
 }
 
 // NginxInfo contains general information about NGINX Plus.
@@ -144,9 +144,9 @@ type NginxInfo struct {
 	Version         string
 	Build           string
 	Address         string
-	Generation      uint64
 	LoadTimestamp   string `json:"load_timestamp"`
 	Timestamp       string
+	Generation      uint64
 	ProcessID       uint64 `json:"pid"`
 	ParentProcessID uint64 `json:"ppid"`
 }
@@ -194,8 +194,8 @@ type Slabs map[string]Slab
 
 // Slab represents slab related stats.
 type Slab struct {
-	Pages Pages
 	Slots Slots
+	Pages Pages
 }
 
 // Pages represents the slab memory usage stats.
@@ -358,11 +358,11 @@ type Upstreams map[string]Upstream
 
 // Upstream represents upstream related stats.
 type Upstream struct {
+	Zone       string
 	Peers      []Peer
+	Queue      Queue
 	Keepalives int
 	Zombies    int
-	Zone       string
-	Queue      Queue
 }
 
 // StreamUpstreams is a map of stream upstream stats by upstream name.
@@ -370,9 +370,9 @@ type StreamUpstreams map[string]StreamUpstream
 
 // StreamUpstream represents stream upstream related stats.
 type StreamUpstream struct {
+	Zone    string
 	Peers   []StreamPeer
 	Zombies int
-	Zone    string
 }
 
 // Queue represents queue related stats for an upstream.
@@ -384,54 +384,54 @@ type Queue struct {
 
 // Peer represents peer (upstream server) related stats.
 type Peer struct {
-	ID           int
 	Server       string
 	Service      string
 	Name         string
-	Backup       bool
-	Weight       int
+	Selected     string
+	Downstart    string
 	State        string
-	Active       uint64
-	SSL          SSL
-	MaxConns     int `json:"max_conns"`
-	Requests     uint64
 	Responses    Responses
+	SSL          SSL
+	HealthChecks HealthChecks `json:"health_checks"`
+	Requests     uint64
+	ID           int
+	MaxConns     int `json:"max_conns"`
 	Sent         uint64
 	Received     uint64
 	Fails        uint64
 	Unavail      uint64
-	HealthChecks HealthChecks `json:"health_checks"`
+	Active       uint64
 	Downtime     uint64
-	Downstart    string
-	Selected     string
+	Weight       int
 	HeaderTime   uint64 `json:"header_time"`
 	ResponseTime uint64 `json:"response_time"`
+	Backup       bool
 }
 
 // StreamPeer represents peer (stream upstream server) related stats.
 type StreamPeer struct {
-	ID            int
 	Server        string
 	Service       string
 	Name          string
-	Backup        bool
-	Weight        int
+	Selected      string
+	Downstart     string
 	State         string
-	Active        uint64
 	SSL           SSL
-	MaxConns      int `json:"max_conns"`
+	HealthChecks  HealthChecks `json:"health_checks"`
 	Connections   uint64
+	Received      uint64
+	ID            int
 	ConnectTime   int    `json:"connect_time"`
 	FirstByteTime int    `json:"first_byte_time"`
 	ResponseTime  uint64 `json:"response_time"`
 	Sent          uint64
-	Received      uint64
+	MaxConns      int `json:"max_conns"`
 	Fails         uint64
 	Unavail       uint64
-	HealthChecks  HealthChecks `json:"health_checks"`
+	Active        uint64
 	Downtime      uint64
-	Downstart     string
-	Selected      string
+	Weight        int
+	Backup        bool
 }
 
 // HealthChecks represents health check related stats for a peer.
@@ -560,7 +560,7 @@ func NewNginxClient(apiEndpoint string, opts ...Option) (*NginxClient, error) {
 	}
 
 	if c.httpClient == nil {
-		return nil, fmt.Errorf("http client is not set")
+		return nil, errors.New("http client is not set")
 	}
 
 	if !versionSupported(c.apiVersion) {
@@ -1510,7 +1510,7 @@ func (client *NginxClient) getKeyValPairs(zone string, stream bool) (KeyValPairs
 		base = "stream"
 	}
 	if zone == "" {
-		return nil, fmt.Errorf("zone required")
+		return nil, errors.New("zone required")
 	}
 
 	path := fmt.Sprintf("%v/keyvals/%v", base, zone)
@@ -1563,7 +1563,7 @@ func (client *NginxClient) addKeyValPair(zone string, key string, val string, st
 		base = "stream"
 	}
 	if zone == "" {
-		return fmt.Errorf("zone required")
+		return errors.New("zone required")
 	}
 
 	path := fmt.Sprintf("%v/keyvals/%v", base, zone)
@@ -1591,7 +1591,7 @@ func (client *NginxClient) modifyKeyValPair(zone string, key string, val string,
 		base = "stream"
 	}
 	if zone == "" {
-		return fmt.Errorf("zone required")
+		return errors.New("zone required")
 	}
 
 	path := fmt.Sprintf("%v/keyvals/%v", base, zone)
@@ -1621,7 +1621,7 @@ func (client *NginxClient) deleteKeyValuePair(zone string, key string, stream bo
 		base = "stream"
 	}
 	if zone == "" {
-		return fmt.Errorf("zone required")
+		return errors.New("zone required")
 	}
 
 	// map[string]string can't have a nil value so we use a different type here.
@@ -1652,7 +1652,7 @@ func (client *NginxClient) deleteKeyValPairs(zone string, stream bool) error {
 		base = "stream"
 	}
 	if zone == "" {
-		return fmt.Errorf("zone required")
+		return errors.New("zone required")
 	}
 
 	path := fmt.Sprintf("%v/keyvals/%v", base, zone)
