@@ -1,9 +1,9 @@
-# syntax=docker/dockerfile:1.6
+# syntax=docker/dockerfile:1.7
 FROM debian:12-slim
 
 LABEL maintainer="NGINX Docker Maintainers <integrations@nginx.com>"
 
-ARG NGINX_PLUS_VERSION=R31
+ARG NGINX_PLUS_VERSION=R32
 
 # Install NGINX Plus
 # Download certificate and key from the customer portal (https://my.f5.com)
