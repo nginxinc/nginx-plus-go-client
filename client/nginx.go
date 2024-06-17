@@ -37,7 +37,7 @@ var (
 	defaultWeight      = 1
 )
 
-// ErrUnsupportedVer means that client's API version is not supported by NGINX plus API
+// ErrUnsupportedVer means that client's API version is not supported by NGINX plus API.
 var ErrUnsupportedVer = errors.New("API version of the client is not supported by running NGINX Plus")
 
 // NginxClient lets you access NGINX Plus API.
@@ -151,10 +151,10 @@ type NginxInfo struct {
 	ParentProcessID uint64 `json:"ppid"`
 }
 
-// Caches is a map of cache stats by cache zone
+// Caches is a map of cache stats by cache zone.
 type Caches = map[string]HTTPCache
 
-// HTTPCache represents a zone's HTTP Cache
+// HTTPCache represents a zone's HTTP Cache.
 type HTTPCache struct {
 	Size        uint64
 	MaxSize     uint64 `json:"max_size"`
@@ -204,7 +204,7 @@ type Pages struct {
 	Free uint64
 }
 
-// Slots is a map of slots by slot size
+// Slots is a map of slots by slot size.
 type Slots map[string]Slot
 
 // Slot represents slot related stats.
@@ -241,7 +241,7 @@ type VerifyFailures struct {
 	Other            uint64 `json:"other"`
 }
 
-// ServerZones is map of server zone stats by zone name
+// ServerZones is map of server zone stats by zone name.
 type ServerZones map[string]ServerZone
 
 // ServerZone represents server zone related stats.
@@ -269,19 +269,19 @@ type StreamServerZone struct {
 	SSL         SSL
 }
 
-// StreamZoneSync represents the sync information per each shared memory zone and the sync information per node in a cluster
+// StreamZoneSync represents the sync information per each shared memory zone and the sync information per node in a cluster.
 type StreamZoneSync struct {
 	Zones  map[string]SyncZone
 	Status StreamZoneSyncStatus
 }
 
-// SyncZone represents the synchronization status of a shared memory zone
+// SyncZone represents the synchronization status of a shared memory zone.
 type SyncZone struct {
 	RecordsPending uint64 `json:"records_pending"`
 	RecordsTotal   uint64 `json:"records_total"`
 }
 
-// StreamZoneSyncStatus represents the status of a shared memory zone
+// StreamZoneSyncStatus represents the status of a shared memory zone.
 type StreamZoneSyncStatus struct {
 	BytesIn     uint64 `json:"bytes_in"`
 	MsgsIn      uint64 `json:"msgs_in"`
@@ -301,7 +301,7 @@ type Responses struct {
 	Total        uint64
 }
 
-// HTTPCodes represents HTTP response codes
+// HTTPCodes represents HTTP response codes.
 type HTTPCodes struct {
 	HTTPContinue              uint64 `json:"100,omitempty"`
 	HTTPSwitchingProtocols    uint64 `json:"101,omitempty"`
@@ -442,13 +442,13 @@ type HealthChecks struct {
 	LastPassed bool `json:"last_passed"`
 }
 
-// LocationZones represents location_zones related stats
+// LocationZones represents location_zones related stats.
 type LocationZones map[string]LocationZone
 
-// Resolvers represents resolvers related stats
+// Resolvers represents resolvers related stats.
 type Resolvers map[string]Resolver
 
-// LocationZone represents location_zones related stats
+// LocationZone represents location_zones related stats.
 type LocationZone struct {
 	Requests  int64
 	Responses Responses
@@ -457,20 +457,20 @@ type LocationZone struct {
 	Sent      int64
 }
 
-// Resolver represents resolvers related stats
+// Resolver represents resolvers related stats.
 type Resolver struct {
 	Requests  ResolverRequests  `json:"requests"`
 	Responses ResolverResponses `json:"responses"`
 }
 
-// ResolverRequests represents resolver requests
+// ResolverRequests represents resolver requests.
 type ResolverRequests struct {
 	Name int64
 	Srv  int64
 	Addr int64
 }
 
-// ResolverResponses represents resolver responses
+// ResolverResponses represents resolver responses.
 type ResolverResponses struct {
 	Noerror  int64
 	Formerr  int64
@@ -482,12 +482,12 @@ type ResolverResponses struct {
 	Unknown  int64
 }
 
-// Processes represents processes related stats
+// Processes represents processes related stats.
 type Processes struct {
 	Respawned int64
 }
 
-// HTTPLimitRequest represents HTTP Requests Rate Limiting
+// HTTPLimitRequest represents HTTP Requests Rate Limiting.
 type HTTPLimitRequest struct {
 	Passed         uint64
 	Delayed        uint64
@@ -496,23 +496,23 @@ type HTTPLimitRequest struct {
 	RejectedDryRun uint64 `json:"rejected_dry_run"`
 }
 
-// HTTPLimitRequests represents limit requests related stats
+// HTTPLimitRequests represents limit requests related stats.
 type HTTPLimitRequests map[string]HTTPLimitRequest
 
-// LimitConnection represents Connections Limiting
+// LimitConnection represents Connections Limiting.
 type LimitConnection struct {
 	Passed         uint64
 	Rejected       uint64
 	RejectedDryRun uint64 `json:"rejected_dry_run"`
 }
 
-// HTTPLimitConnections represents limit connections related stats
+// HTTPLimitConnections represents limit connections related stats.
 type HTTPLimitConnections map[string]LimitConnection
 
-// StreamLimitConnections represents limit connections related stats
+// StreamLimitConnections represents limit connections related stats.
 type StreamLimitConnections map[string]LimitConnection
 
-// Workers represents worker connections related stats
+// Workers represents worker connections related stats.
 type Workers struct {
 	ID          int
 	ProcessID   uint64      `json:"pid"`
@@ -520,7 +520,7 @@ type Workers struct {
 	Connections Connections
 }
 
-// WorkersHTTP represents HTTP worker connections
+// WorkersHTTP represents HTTP worker connections.
 type WorkersHTTP struct {
 	HTTPRequests HTTPRequests `json:"requests"`
 }
@@ -725,7 +725,7 @@ func (client *NginxClient) UpdateHTTPServers(upstream string, servers []Upstream
 	}
 
 	// We assume port 80 if no port is set for servers.
-	var formattedServers []UpstreamServer
+	formattedServers := make([]UpstreamServer, 0, len(servers))
 	for _, server := range servers {
 		server.Server = addPortToServer(server.Server)
 		formattedServers = append(formattedServers, server)
@@ -757,7 +757,7 @@ func (client *NginxClient) UpdateHTTPServers(upstream string, servers []Upstream
 	return toAdd, toDelete, toUpdate, nil
 }
 
-// haveSameParameters checks if a given server has the same parameters as a server already present in NGINX. Order matters
+// haveSameParameters checks if a given server has the same parameters as a server already present in NGINX. Order matters.
 func haveSameParameters(newServer UpstreamServer, serverNGX UpstreamServer) bool {
 	newServer.ID = serverNGX.ID
 
@@ -1036,7 +1036,7 @@ func (client *NginxClient) UpdateStreamServers(upstream string, servers []Stream
 		return nil, nil, nil, fmt.Errorf("failed to update stream servers of %v upstream: %w", upstream, err)
 	}
 
-	var formattedServers []StreamUpstreamServer
+	formattedServers := make([]StreamUpstreamServer, 0, len(servers))
 	for _, server := range servers {
 		server.Server = addPortToServer(server.Server)
 		formattedServers = append(formattedServers, server)
@@ -1083,7 +1083,7 @@ func (client *NginxClient) getIDOfStreamServer(upstream string, name string) (in
 	return -1, nil
 }
 
-// haveSameParametersForStream checks if a given server has the same parameters as a server already present in NGINX. Order matters
+// haveSameParametersForStream checks if a given server has the same parameters as a server already present in NGINX. Order matters.
 func haveSameParametersForStream(newServer StreamUpstreamServer, serverNGX StreamUpstreamServer) bool {
 	newServer.ID = serverNGX.ID
 	if serverNGX.MaxConns != nil && newServer.MaxConns == nil {
@@ -1330,7 +1330,7 @@ func (client *NginxClient) GetNginxInfo() (*NginxInfo, error) {
 	return &info, nil
 }
 
-// GetCaches returns Cache stats
+// GetCaches returns Cache stats.
 func (client *NginxClient) GetCaches() (*Caches, error) {
 	var caches Caches
 	err := client.get("http/caches", &caches)
