@@ -1177,11 +1177,12 @@ func TestStreamZoneSync(t *testing.T) {
 }
 
 func compareUpstreamServers(x []client.UpstreamServer, y []client.UpstreamServer) bool {
-	var xServers []string
+	xServers := make([]string, 0, len(x))
 	for _, us := range x {
 		xServers = append(xServers, us.Server)
 	}
-	var yServers []string
+
+	yServers := make([]string, 0, len(y))
 	for _, us := range y {
 		yServers = append(yServers, us.Server)
 	}
@@ -1190,11 +1191,11 @@ func compareUpstreamServers(x []client.UpstreamServer, y []client.UpstreamServer
 }
 
 func compareStreamUpstreamServers(x []client.StreamUpstreamServer, y []client.StreamUpstreamServer) bool {
-	var xServers []string
+	xServers := make([]string, 0, len(x))
 	for _, us := range x {
 		xServers = append(xServers, us.Server)
 	}
-	var yServers []string
+	yServers := make([]string, 0, len(y))
 	for _, us := range y {
 		yServers = append(yServers, us.Server)
 	}

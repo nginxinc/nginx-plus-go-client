@@ -9,6 +9,7 @@ import (
 )
 
 func TestDetermineUpdates(t *testing.T) {
+	t.Parallel()
 	maxConns := 1
 	tests := []struct {
 		updated          []UpstreamServer
@@ -162,6 +163,7 @@ func TestDetermineUpdates(t *testing.T) {
 }
 
 func TestStreamDetermineUpdates(t *testing.T) {
+	t.Parallel()
 	maxConns := 1
 	tests := []struct {
 		updated          []StreamUpstreamServer
@@ -318,6 +320,7 @@ func TestStreamDetermineUpdates(t *testing.T) {
 }
 
 func TestAddPortToServer(t *testing.T) {
+	t.Parallel()
 	// More info about addresses http://nginx.org/en/docs/http/ngx_http_upstream_module.html#server
 	tests := []struct {
 		address  string
@@ -370,6 +373,7 @@ func TestAddPortToServer(t *testing.T) {
 }
 
 func TestHaveSameParameters(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		server    UpstreamServer
 		serverNGX UpstreamServer
@@ -449,6 +453,7 @@ func TestHaveSameParameters(t *testing.T) {
 }
 
 func TestHaveSameParametersForStream(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		server    StreamUpstreamServer
 		serverNGX StreamUpstreamServer
@@ -523,6 +528,7 @@ func TestHaveSameParametersForStream(t *testing.T) {
 }
 
 func TestClientWithCheckAPI(t *testing.T) {
+	t.Parallel()
 	// Create a test server that returns supported API versions
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, err := w.Write([]byte(`[4, 5, 6, 7, 8, 9]`))
@@ -552,6 +558,7 @@ func TestClientWithCheckAPI(t *testing.T) {
 }
 
 func TestClientWithAPIVersion(t *testing.T) {
+	t.Parallel()
 	// Test creating a new client with a supported API version on the client
 	client, err := NewNginxClient("http://api-url", WithAPIVersion(8))
 	if err != nil {
@@ -572,6 +579,7 @@ func TestClientWithAPIVersion(t *testing.T) {
 }
 
 func TestClientWithHTTPClient(t *testing.T) {
+	t.Parallel()
 	// Test creating a new client passing a custom HTTP client
 	client, err := NewNginxClient("http://api-url", WithHTTPClient(&http.Client{}))
 	if err != nil {
@@ -592,6 +600,7 @@ func TestClientWithHTTPClient(t *testing.T) {
 }
 
 func TestGetStats_NoStreamEndpoint(t *testing.T) {
+	t.Parallel()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.RequestURI == "/" {
 			_, err := w.Write([]byte(`[4, 5, 6, 7, 8, 9]`))
@@ -643,6 +652,7 @@ func TestGetStats_NoStreamEndpoint(t *testing.T) {
 }
 
 func TestGetStats_SSL(t *testing.T) {
+	t.Parallel()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.RequestURI == "/" {
 			_, err := w.Write([]byte(`[4, 5, 6, 7, 8, 9]`))
