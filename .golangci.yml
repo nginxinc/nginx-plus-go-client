@@ -34,14 +34,19 @@ linters:
     - asasalint
     - asciicheck
     - bidichk
+    - contextcheck
     - dupword
+    - durationcheck
     - errcheck
+    - errchkjson
     - errname
     - errorlint
     - exportloopref
     - fatcontext
     - forcetypeassert
     - gocheckcompilerdirectives
+    - gochecksumtype
+    - gocritic
     - godot
     - gofmt
     - gofumpt
@@ -54,6 +59,7 @@ linters:
     - intrange
     - makezero
     - misspell
+    - musttag
     - nilerr
     - noctx
     - nolintlint
