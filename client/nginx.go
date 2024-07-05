@@ -361,7 +361,7 @@ type Upstream struct {
 	Zone       string
 	Peers      []Peer
 	Queue      Queue
-	Keepalives int
+	Keepalive  int
 	Zombies    int
 }
 
