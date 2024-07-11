@@ -358,11 +358,11 @@ type Upstreams map[string]Upstream
 
 // Upstream represents upstream related stats.
 type Upstream struct {
-	Zone       string
-	Peers      []Peer
-	Queue      Queue
-	Keepalives int
-	Zombies    int
+	Zone      string
+	Peers     []Peer
+	Queue     Queue
+	Keepalive int
+	Zombies   int
 }
 
 // StreamUpstreams is a map of stream upstream stats by upstream name.
