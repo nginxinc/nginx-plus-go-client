@@ -602,19 +602,20 @@ func TestClientWithHTTPClient(t *testing.T) {
 func TestGetStats_NoStreamEndpoint(t *testing.T) {
 	t.Parallel()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.RequestURI == "/" {
+		switch {
+		case r.RequestURI == "/":
 			_, err := w.Write([]byte(`[4, 5, 6, 7, 8, 9]`))
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-		} else if r.RequestURI == "/7/" {
+		case r.RequestURI == "/7/":
 			_, err := w.Write([]byte(`["nginx","processes","connections","slabs","http","resolvers","ssl"]`))
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-		} else if strings.HasPrefix(r.RequestURI, "/7/stream") {
+		case strings.HasPrefix(r.RequestURI, "/7/stream"):
 			t.Fatal("Stream endpoint should not be called since it does not exist.")
-		} else {
+		default:
 			_, err := w.Write([]byte(`{}`))
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
@@ -654,17 +655,18 @@ func TestGetStats_NoStreamEndpoint(t *testing.T) {
 func TestGetStats_SSL(t *testing.T) {
 	t.Parallel()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.RequestURI == "/" {
+		switch {
+		case r.RequestURI == "/":
 			_, err := w.Write([]byte(`[4, 5, 6, 7, 8, 9]`))
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-		} else if r.RequestURI == "/8/" {
+		case r.RequestURI == "/8/":
 			_, err := w.Write([]byte(`["nginx","processes","connections","slabs","http","resolvers","ssl","workers"]`))
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-		} else if strings.HasPrefix(r.RequestURI, "/8/ssl") {
+		case strings.HasPrefix(r.RequestURI, "/8/ssl"):
 			_, err := w.Write([]byte(`{
 				"handshakes" : 79572,
 				"handshakes_failed" : 21025,
@@ -684,7 +686,7 @@ func TestGetStats_SSL(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-		} else {
+		default:
 			_, err := w.Write([]byte(`{}`))
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)

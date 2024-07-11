@@ -83,9 +83,9 @@ type StreamUpstreamServer struct {
 }
 
 type apiErrorResponse struct {
-	RequestID string `json:"request_id"`
-	Href      string
-	Error     apiError
+	RequestID string   `json:"request_id"`
+	Href      string   `json:"href"`
+	Error     apiError `json:"error"`
 }
 
 func (resp *apiErrorResponse) toString() string {
@@ -94,9 +94,9 @@ func (resp *apiErrorResponse) toString() string {
 }
 
 type apiError struct {
-	Text   string
-	Code   string
-	Status int
+	Text   string `json:"text"`
+	Code   string `json:"code"`
+	Status int    `json:"status"`
 }
 
 type internalError struct {
