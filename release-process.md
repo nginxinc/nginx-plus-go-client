@@ -2,6 +2,16 @@
 
 This document outlines the steps involved in the release process for the NGINX Plus Go Client project.
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+## Table of Contents
+
+- [Versioning](#versioning)
+- [Release Planning and Development](#release-planning-and-development)
+- [Releasing a New Version](#releasing-a-new-version)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Versioning
 
 The project follows [Semantic Versioning](https://semver.org/) for versioning.
