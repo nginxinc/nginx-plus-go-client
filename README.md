@@ -1,4 +1,3 @@
-
 <!-- markdownlint-disable-next-line first-line-h1 -->
 [![OpenSSFScorecard](https://api.securityscorecards.dev/projects/github.com/nginxinc/nginx-plus-go-client/badge)](https://api.securityscorecards.dev/projects/github.com/nginxinc/nginx-plus-go-client)
 [![Continuous Integration](https://github.com/nginxinc/nginx-plus-go-client/workflows/Continuous%20Integration/badge.svg)](https://github.com/nginxinc/nginx-plus-go-client/actions)
@@ -14,6 +13,22 @@
 # NGINX Plus Go Client
 
 This project includes a client library for working with NGINX Plus API.
+
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+## Table of Contents
+
+- [About the Client](#about-the-client)
+- [Compatibility](#compatibility)
+- [Using the Client](#using-the-client)
+- [Testing](#testing)
+  - [Unit tests](#unit-tests)
+  - [Integration tests](#integration-tests)
+- [Contacts](#contacts)
+- [Contributing](#contributing)
+- [Support](#support)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## About the Client
 
