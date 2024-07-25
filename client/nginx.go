@@ -35,7 +35,7 @@ var (
 	defaultBackup      = false
 	defaultDown        = false
 	defaultWeight      = 1
-	defaultTimeout     = 10*time.Second
+	defaultTimeout     = 10 * time.Second
 )
 
 // ErrUnsupportedVer means that client's API version is not supported by NGINX plus API.

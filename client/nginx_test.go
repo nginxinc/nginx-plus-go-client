@@ -582,7 +582,7 @@ func TestClientWithAPIVersion(t *testing.T) {
 func TestClientWithTimeout(t *testing.T) {
 	t.Parallel()
 	// Test creating a new client with a supported API version on the client
-	client, err := NewNginxClient("http://api-url", WithTimeout(1 * time.Second))
+	client, err := NewNginxClient("http://api-url", WithTimeout(1*time.Second))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -591,7 +591,7 @@ func TestClientWithTimeout(t *testing.T) {
 	}
 
 	// Test creating a new client with an invalid duration
-	client, err = NewNginxClient("http://api-url", WithTimeout(-1 * time.Second))
+	client, err = NewNginxClient("http://api-url", WithTimeout(-1*time.Second))
 	if err == nil {
 		t.Fatalf("expected error, but got nil")
 	}
