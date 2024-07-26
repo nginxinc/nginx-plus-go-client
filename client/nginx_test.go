@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestDetermineUpdates(t *testing.T) {
@@ -570,6 +571,27 @@ func TestClientWithAPIVersion(t *testing.T) {
 
 	// Test creating a new client with an unsupported API version on the client
 	client, err = NewNginxClient("http://api-url", WithAPIVersion(3))
+	if err == nil {
+		t.Fatalf("expected error, but got nil")
+	}
+	if client != nil {
+		t.Fatalf("expected client to be nil, but got %v", client)
+	}
+}
+
+func TestClientWithTimeout(t *testing.T) {
+	t.Parallel()
+	// Test creating a new client with a supported API version on the client
+	client, err := NewNginxClient("http://api-url", WithTimeout(1*time.Second))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if client == nil {
+		t.Fatalf("client is nil")
+	}
+
+	// Test creating a new client with an invalid duration
+	client, err = NewNginxClient("http://api-url", WithTimeout(-1*time.Second))
 	if err == nil {
 		t.Fatalf("expected error, but got nil")
 	}
