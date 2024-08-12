@@ -32,6 +32,7 @@ linters-settings:
 linters:
   enable:
     - asasalint
+    - err113
     - asciicheck
     - bidichk
     - contextcheck
