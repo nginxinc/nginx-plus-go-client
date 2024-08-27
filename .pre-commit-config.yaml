@@ -11,15 +11,20 @@ repos:
       - id: check-added-large-files
       - id: check-merge-conflict
       - id: check-shebang-scripts-are-executable
+      - id: check-executables-have-shebangs
       - id: check-case-conflict
       - id: check-vcs-permalinks
+      - id: check-json
+      - id: pretty-format-json
+        args: [--autofix, --no-ensure-ascii]
       - id: mixed-line-ending
         args: [--fix=lf]
       - id: no-commit-to-branch
       - id: fix-byte-order-marker
+      - id: detect-private-key
 
   - repo: https://github.com/golangci/golangci-lint
-    rev: v1.60.1
+    rev: v1.60.3
     hooks:
       - id: golangci-lint-full
 
@@ -46,3 +51,4 @@ repos:
 
 ci:
   skip: [golangci-lint-full]
+  autoupdate_schedule: quarterly # We use renovate for more frequent updates and there's no way to disable autoupdate

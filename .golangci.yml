@@ -32,17 +32,17 @@ linters-settings:
 linters:
   enable:
     - asasalint
-    - err113
     - asciicheck
     - bidichk
     - contextcheck
+    - copyloopvar
     - dupword
     - durationcheck
+    - err113
     - errcheck
     - errchkjson
     - errname
     - errorlint
-    - exportloopref
     - fatcontext
     - forcetypeassert
     - gocheckcompilerdirectives
