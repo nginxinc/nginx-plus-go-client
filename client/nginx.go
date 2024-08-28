@@ -126,7 +126,7 @@ func (internalError *internalError) Wrap(err string) *internalError {
 	return internalError
 }
 
-// this is an internal representation of the Stats object including endpoint and streamEndpoint lists
+// this is an internal representation of the Stats object including endpoint and streamEndpoint lists.
 type extendedStats struct {
 	endpoints       []string
 	streamEndpoints []string
