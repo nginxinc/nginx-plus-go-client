@@ -757,3 +757,67 @@ func TestGetStats_SSL(t *testing.T) {
 		t.Fatalf("SSL stats: expected %v, actual %v", testStats, stats.SSL)
 	}
 }
+
+func TestGetMaxAPIVersionServer(t *testing.T) {
+	t.Parallel()
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.RequestURI == "/":
+			_, err := w.Write([]byte(`[4, 5, 6, 7]`))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		default:
+			_, err := w.Write([]byte(`{}`))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		}
+	}))
+	defer ts.Close()
+
+	c, err := NewNginxClient(ts.URL)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	maxVer, err := c.GetMaxAPIVersion()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if maxVer != 7 {
+		t.Fatalf("expected 7, got %v", maxVer)
+	}
+}
+
+func TestGetMaxAPIVersionClient(t *testing.T) {
+	t.Parallel()
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.RequestURI == "/":
+			_, err := w.Write([]byte(`[4, 5, 6, 7, 8, 9, 25]`))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		default:
+			_, err := w.Write([]byte(`{}`))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		}
+	}))
+	defer ts.Close()
+
+	c, err := NewNginxClient(ts.URL)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	maxVer, err := c.GetMaxAPIVersion()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if maxVer != c.apiVersion {
+		t.Fatalf("expected %v, got %v", c.apiVersion, maxVer)
+	}
+}

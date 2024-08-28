@@ -41,8 +41,13 @@ var (
 	defaultTimeout     = 10 * time.Second
 )
 
-// ErrUnsupportedVer means that client's API version is not supported by NGINX plus API.
-var ErrUnsupportedVer = errors.New("API version of the client is not supported by running NGINX Plus")
+var (
+	ErrParameterRequired = errors.New("parameter is required")
+	ErrServerNotFound    = errors.New("server not found")
+	ErrServerExists      = errors.New("server already exists")
+	ErrNotSupported      = errors.New("not supported")
+	ErrInvalidTimeout    = errors.New("invalid timeout")
+)
 
 // NginxClient lets you access NGINX Plus API.
 type NginxClient struct {
@@ -607,15 +612,15 @@ func NewNginxClient(apiEndpoint string, opts ...Option) (*NginxClient, error) {
 	}
 
 	if c.httpClient == nil {
-		return nil, errors.New("http client is not set")
+		return nil, fmt.Errorf("http client: %w", ErrParameterRequired)
 	}
 
 	if !versionSupported(c.apiVersion) {
-		return nil, fmt.Errorf("API version %v is not supported by the client", c.apiVersion)
+		return nil, fmt.Errorf("API version %v: %w by the client", c.apiVersion, ErrNotSupported)
 	}
 
 	if c.ctxTimeout <= 0 {
-		return nil, fmt.Errorf("timeout has to be greater than 0 %v", c.ctxTimeout)
+		return nil, fmt.Errorf("timeout %q needs to be greater than 0: %w", c.ctxTimeout, ErrInvalidTimeout)
 	}
 
 	if c.checkAPI {
@@ -631,7 +636,7 @@ func NewNginxClient(apiEndpoint string, opts ...Option) (*NginxClient, error) {
 			}
 		}
 		if !found {
-			return nil, fmt.Errorf("API version %v is not supported by the server", c.apiVersion)
+			return nil, fmt.Errorf("API version %v: %w by the server", c.apiVersion, ErrNotSupported)
 		}
 	}
 
@@ -645,6 +650,23 @@ func versionSupported(n int) bool {
 		}
 	}
 	return false
+}
+
+// GetMaxAPIVersion returns the maximum API version supported by the server and the client.
+func (client *NginxClient) GetMaxAPIVersion() (int, error) {
+	serverVersions, err := client.getAPIVersions(client.httpClient, client.apiEndpoint)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get max API version: %w", err)
+	}
+
+	maxServerVersion := slices.Max(*serverVersions)
+	maxClientVersion := slices.Max(supportedAPIVersions)
+
+	if maxServerVersion > maxClientVersion {
+		return maxClientVersion, nil
+	}
+
+	return maxServerVersion, nil
 }
 
 func (client *NginxClient) getAPIVersions(httpClient *http.Client, endpoint string) (*versions, error) {
@@ -662,7 +684,9 @@ func (client *NginxClient) getAPIVersions(httpClient *http.Client, endpoint stri
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("%v is not accessible: expected %v response, got %v", endpoint, http.StatusOK, resp.StatusCode)
+		return nil, createResponseMismatchError(resp.Body).Wrap(fmt.Sprintf(
+			"failed to get endpoint %q, expected %v response, got %v",
+			endpoint, http.StatusOK, resp.StatusCode))
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -734,7 +758,7 @@ func (client *NginxClient) AddHTTPServer(upstream string, server UpstreamServer)
 		return fmt.Errorf("failed to add %v server to %v upstream: %w", server.Server, upstream, err)
 	}
 	if id != -1 {
-		return fmt.Errorf("failed to add %v server to %v upstream: server already exists", server.Server, upstream)
+		return fmt.Errorf("failed to add %v server to %v upstream: %w", server.Server, upstream, ErrServerExists)
 	}
 
 	path := fmt.Sprintf("http/upstreams/%v/servers/", upstream)
@@ -753,7 +777,7 @@ func (client *NginxClient) DeleteHTTPServer(upstream string, server string) erro
 		return fmt.Errorf("failed to remove %v server from  %v upstream: %w", server, upstream, err)
 	}
 	if id == -1 {
-		return fmt.Errorf("failed to remove %v server from %v upstream: server doesn't exist", server, upstream)
+		return fmt.Errorf("failed to remove %v server from %v upstream: %w", server, upstream, ErrServerNotFound)
 	}
 
 	path := fmt.Sprintf("http/upstreams/%v/servers/%v", upstream, id)
@@ -1048,7 +1072,7 @@ func (client *NginxClient) AddStreamServer(upstream string, server StreamUpstrea
 		return fmt.Errorf("failed to add %v stream server to %v upstream: %w", server.Server, upstream, err)
 	}
 	if id != -1 {
-		return fmt.Errorf("failed to add %v stream server to %v upstream: server already exists", server.Server, upstream)
+		return fmt.Errorf("failed to add %v stream server to %v upstream: %w", server.Server, upstream, ErrServerExists)
 	}
 
 	path := fmt.Sprintf("stream/upstreams/%v/servers/", upstream)
@@ -1066,7 +1090,7 @@ func (client *NginxClient) DeleteStreamServer(upstream string, server string) er
 		return fmt.Errorf("failed to remove %v stream server from  %v upstream: %w", server, upstream, err)
 	}
 	if id == -1 {
-		return fmt.Errorf("failed to remove %v stream server from %v upstream: server doesn't exist", server, upstream)
+		return fmt.Errorf("failed to remove %v stream server from %v upstream: %w", server, upstream, ErrServerNotFound)
 	}
 
 	path := fmt.Sprintf("stream/upstreams/%v/servers/%v", upstream, id)
@@ -1677,7 +1701,7 @@ func (client *NginxClient) getKeyValPairs(zone string, stream bool) (KeyValPairs
 		base = "stream"
 	}
 	if zone == "" {
-		return nil, errors.New("zone required")
+		return nil, fmt.Errorf("zone: %w", ErrParameterRequired)
 	}
 
 	path := fmt.Sprintf("%v/keyvals/%v", base, zone)
@@ -1730,7 +1754,7 @@ func (client *NginxClient) addKeyValPair(zone string, key string, val string, st
 		base = "stream"
 	}
 	if zone == "" {
-		return errors.New("zone required")
+		return fmt.Errorf("zone: %w", ErrParameterRequired)
 	}
 
 	path := fmt.Sprintf("%v/keyvals/%v", base, zone)
@@ -1758,7 +1782,7 @@ func (client *NginxClient) modifyKeyValPair(zone string, key string, val string,
 		base = "stream"
 	}
 	if zone == "" {
-		return errors.New("zone required")
+		return fmt.Errorf("zone: %w", ErrParameterRequired)
 	}
 
 	path := fmt.Sprintf("%v/keyvals/%v", base, zone)
@@ -1788,7 +1812,7 @@ func (client *NginxClient) deleteKeyValuePair(zone string, key string, stream bo
 		base = "stream"
 	}
 	if zone == "" {
-		return errors.New("zone required")
+		return fmt.Errorf("zone: %w", ErrParameterRequired)
 	}
 
 	// map[string]string can't have a nil value so we use a different type here.
@@ -1819,7 +1843,7 @@ func (client *NginxClient) deleteKeyValPairs(zone string, stream bool) error {
 		base = "stream"
 	}
 	if zone == "" {
-		return errors.New("zone required")
+		return fmt.Errorf("zone: %w", ErrParameterRequired)
 	}
 
 	path := fmt.Sprintf("%v/keyvals/%v", base, zone)
