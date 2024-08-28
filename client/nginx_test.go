@@ -708,6 +708,11 @@ func TestGetStats_SSL(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
+		case strings.HasPrefix(r.RequestURI, "/8/stream"):
+			_, err := w.Write([]byte(`[""]`))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 		default:
 			_, err := w.Write([]byte(`{}`))
 			if err != nil {

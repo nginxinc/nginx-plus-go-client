@@ -11,7 +11,10 @@ import (
 	"reflect"
 	"slices"
 	"strings"
+	"sync"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -116,6 +119,40 @@ func (internalError *internalError) Error() string {
 func (internalError *internalError) Wrap(err string) *internalError {
 	internalError.err = fmt.Sprintf("%v. %v", err, internalError.err)
 	return internalError
+}
+
+// this is an internal representation of the Stats object including endpoint and streamEndpoint lists
+type extendedStats struct {
+	endpoints       []string
+	streamEndpoints []string
+	Stats
+}
+
+func defaultStats() *extendedStats {
+	return &extendedStats{
+		endpoints:       []string{},
+		streamEndpoints: []string{},
+		Stats: Stats{
+			Upstreams:              map[string]Upstream{},
+			ServerZones:            map[string]ServerZone{},
+			StreamServerZones:      map[string]StreamServerZone{},
+			StreamUpstreams:        map[string]StreamUpstream{},
+			Slabs:                  map[string]Slab{},
+			Caches:                 map[string]HTTPCache{},
+			HTTPLimitConnections:   map[string]LimitConnection{},
+			StreamLimitConnections: map[string]LimitConnection{},
+			HTTPLimitRequests:      map[string]HTTPLimitRequest{},
+			Resolvers:              map[string]Resolver{},
+			LocationZones:          map[string]LocationZone{},
+			StreamZoneSync:         &StreamZoneSync{},
+			Workers:                []*Workers{},
+			NginxInfo:              NginxInfo{},
+			SSL:                    SSL{},
+			Connections:            Connections{},
+			HTTPRequests:           HTTPRequests{},
+			Processes:              Processes{},
+		},
+	}
 }
 
 // Stats represents NGINX Plus stats fetched from the NGINX Plus API.
@@ -1177,141 +1214,257 @@ func determineStreamUpdates(updatedServers []StreamUpstreamServer, nginxServers 
 
 // GetStats gets process, slab, connection, request, ssl, zone, stream zone, upstream and stream upstream related stats from the NGINX Plus API.
 func (client *NginxClient) GetStats() (*Stats, error) {
-	endpoints, err := client.GetAvailableEndpoints()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %w", err)
-	}
-
-	info, err := client.GetNginxInfo()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %w", err)
-	}
-
-	caches, err := client.GetCaches()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %w", err)
-	}
-
-	processes, err := client.GetProcesses()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %w", err)
-	}
-
-	slabs, err := client.GetSlabs()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %w", err)
-	}
-
-	cons, err := client.GetConnections()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %w", err)
-	}
-
-	requests, err := client.GetHTTPRequests()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %w", err)
-	}
-
-	ssl, err := client.GetSSL()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %w", err)
-	}
-
-	zones, err := client.GetServerZones()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %w", err)
-	}
-
-	upstreams, err := client.GetUpstreams()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %w", err)
-	}
-
-	locationZones, err := client.GetLocationZones()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %w", err)
-	}
-
-	resolvers, err := client.GetResolvers()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %w", err)
-	}
-
-	limitReqs, err := client.GetHTTPLimitReqs()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %w", err)
-	}
-
-	limitConnsHTTP, err := client.GetHTTPConnectionsLimit()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %w", err)
-	}
-
-	workers, err := client.GetWorkers()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %w", err)
-	}
-
-	streamZones := &StreamServerZones{}
-	streamUpstreams := &StreamUpstreams{}
-	limitConnsStream := &StreamLimitConnections{}
-	var streamZoneSync *StreamZoneSync
-
-	if slices.Contains(endpoints, "stream") {
-		streamEndpoints, err := client.GetAvailableStreamEndpoints()
+	var g errgroup.Group
+	var mu sync.Mutex
+	stats := defaultStats()
+	// Collecting initial stats
+	g.Go(func() error {
+		mu.Lock()
+		endpoints, err := client.GetAvailableEndpoints()
+		mu.Unlock()
 		if err != nil {
-			return nil, fmt.Errorf("failed to get stats: %w", err)
+			return fmt.Errorf("failed to get available Endpoints: %w", err)
+		}
+		stats.endpoints = endpoints
+		return nil
+	})
+
+	g.Go(func() error {
+		mu.Lock()
+		nginxInfo, err := client.GetNginxInfo()
+		mu.Unlock()
+		if err != nil {
+			return fmt.Errorf("failed to get NGINX info: %w", err)
+		}
+		stats.NginxInfo = *nginxInfo
+		return nil
+	})
+
+	g.Go(func() error {
+		mu.Lock()
+		caches, err := client.GetCaches()
+		mu.Unlock()
+		if err != nil {
+			return fmt.Errorf("failed to get Caches: %w", err)
+		}
+		stats.Caches = *caches
+		return nil
+	})
+
+	g.Go(func() error {
+		mu.Lock()
+		processes, err := client.GetProcesses()
+		mu.Unlock()
+		if err != nil {
+			return fmt.Errorf("failed to get Process information: %w", err)
+		}
+		stats.Processes = *processes
+		return nil
+	})
+
+	g.Go(func() error {
+		mu.Lock()
+		slabs, err := client.GetSlabs()
+		mu.Unlock()
+		if err != nil {
+			return fmt.Errorf("failed to get Slabs: %w", err)
+		}
+		stats.Slabs = *slabs
+		return nil
+	})
+
+	g.Go(func() error {
+		mu.Lock()
+		httpRequests, err := client.GetHTTPRequests()
+		mu.Unlock()
+		if err != nil {
+			return fmt.Errorf("failed to get HTTP Requests: %w", err)
+		}
+		stats.HTTPRequests = *httpRequests
+		return nil
+	})
+
+	g.Go(func() error {
+		mu.Lock()
+		ssl, err := client.GetSSL()
+		mu.Unlock()
+		if err != nil {
+			return fmt.Errorf("failed to get SSL: %w", err)
+		}
+		stats.SSL = *ssl
+		return nil
+	})
+
+	g.Go(func() error {
+		mu.Lock()
+		serverZones, err := client.GetServerZones()
+		mu.Unlock()
+		if err != nil {
+			return fmt.Errorf("failed to get Server Zones: %w", err)
+		}
+		stats.ServerZones = *serverZones
+		return nil
+	})
+
+	g.Go(func() error {
+		mu.Lock()
+		upstreams, err := client.GetUpstreams()
+		mu.Unlock()
+		if err != nil {
+			return fmt.Errorf("failed to get Upstreams: %w", err)
+		}
+		stats.Upstreams = *upstreams
+		return nil
+	})
+
+	g.Go(func() error {
+		mu.Lock()
+		locationZones, err := client.GetLocationZones()
+		mu.Unlock()
+		if err != nil {
+			return fmt.Errorf("failed to get Location Zones: %w", err)
+		}
+		stats.LocationZones = *locationZones
+		return nil
+	})
+
+	g.Go(func() error {
+		mu.Lock()
+		resolvers, err := client.GetResolvers()
+		mu.Unlock()
+		if err != nil {
+			return fmt.Errorf("failed to get Resolvers: %w", err)
+		}
+		stats.Resolvers = *resolvers
+		return nil
+	})
+
+	g.Go(func() error {
+		mu.Lock()
+		httpLimitRequests, err := client.GetHTTPLimitReqs()
+		mu.Unlock()
+		if err != nil {
+			return fmt.Errorf("failed to get HTTPLimitRequests: %w", err)
+		}
+		stats.HTTPLimitRequests = *httpLimitRequests
+		return nil
+	})
+
+	g.Go(func() error {
+		mu.Lock()
+		httpLimitConnections, err := client.GetHTTPConnectionsLimit()
+		mu.Unlock()
+		if err != nil {
+			return fmt.Errorf("failed to get HTTPLimitConnections: %w", err)
+		}
+		stats.HTTPLimitConnections = *httpLimitConnections
+		return nil
+	})
+
+	g.Go(func() error {
+		mu.Lock()
+		workers, err := client.GetWorkers()
+		mu.Unlock()
+		if err != nil {
+			return fmt.Errorf("failed to get Workers: %w", err)
+		}
+		stats.Workers = workers
+		return nil
+	})
+
+	if err := g.Wait(); err != nil {
+		return nil, fmt.Errorf("error returned from contacting Plus API: %w", err)
+	}
+
+	// Process stream endpoints if they exist
+	if slices.Contains(stats.endpoints, "stream") {
+		var streamGroup errgroup.Group
+
+		streamGroup.Go(func() error {
+			mu.Lock()
+			streamEndpoints, err := client.GetAvailableStreamEndpoints()
+			mu.Unlock()
+			if err != nil {
+				return fmt.Errorf("failed to get available Stream Endpoints: %w", err)
+			}
+			stats.streamEndpoints = streamEndpoints
+			return nil
+		})
+
+		if slices.Contains(stats.streamEndpoints, "server_zones") {
+			streamGroup.Go(func() error {
+				streamServerZones, err := client.GetStreamServerZones()
+				if err != nil {
+					return fmt.Errorf("failed to get streamServerZones: %w", err)
+				}
+				mu.Lock()
+				stats.StreamServerZones = *streamServerZones
+				mu.Unlock()
+				return nil
+			})
 		}
 
-		if slices.Contains(streamEndpoints, "server_zones") {
-			streamZones, err = client.GetStreamServerZones()
-			if err != nil {
-				return nil, fmt.Errorf("failed to get stats: %w", err)
-			}
+		if slices.Contains(stats.streamEndpoints, "upstreams") {
+			streamGroup.Go(func() error {
+				streamUpstreams, err := client.GetStreamUpstreams()
+				if err != nil {
+					return fmt.Errorf("failed to get StreamUpstreams: %w", err)
+				}
+				mu.Lock()
+				stats.StreamUpstreams = *streamUpstreams
+				mu.Unlock()
+
+				return nil
+			})
 		}
 
-		if slices.Contains(streamEndpoints, "upstreams") {
-			streamUpstreams, err = client.GetStreamUpstreams()
-			if err != nil {
-				return nil, fmt.Errorf("failed to get stats: %w", err)
-			}
+		if slices.Contains(stats.streamEndpoints, "limit_conns") {
+			streamGroup.Go(func() error {
+				streamConnectionsLimit, err := client.GetStreamConnectionsLimit()
+				if err != nil {
+					return fmt.Errorf("failed to get StreamLimitConnections: %w", err)
+				}
+				mu.Lock()
+				stats.StreamLimitConnections = *streamConnectionsLimit
+				mu.Unlock()
+				return nil
+			})
+
+			streamGroup.Go(func() error {
+				streamZoneSync, err := client.GetStreamZoneSync()
+				if err != nil {
+					return fmt.Errorf("failed to get StreamZoneSync: %w", err)
+				}
+				mu.Lock()
+				stats.StreamZoneSync = streamZoneSync
+				mu.Unlock()
+				return nil
+			})
 		}
 
-		if slices.Contains(streamEndpoints, "limit_conns") {
-			limitConnsStream, err = client.GetStreamConnectionsLimit()
-			if err != nil {
-				return nil, fmt.Errorf("failed to get stats: %w", err)
-			}
-		}
-
-		if slices.Contains(streamEndpoints, "zone_sync") {
-			streamZoneSync, err = client.GetStreamZoneSync()
-			if err != nil {
-				return nil, fmt.Errorf("failed to get stats: %w", err)
-			}
+		if err := streamGroup.Wait(); err != nil {
+			return nil, fmt.Errorf("no useful metrics found in stream stats: %w", err)
 		}
 	}
 
-	return &Stats{
-		NginxInfo:              *info,
-		Caches:                 *caches,
-		Processes:              *processes,
-		Slabs:                  *slabs,
-		Connections:            *cons,
-		HTTPRequests:           *requests,
-		SSL:                    *ssl,
-		ServerZones:            *zones,
-		StreamServerZones:      *streamZones,
-		Upstreams:              *upstreams,
-		StreamUpstreams:        *streamUpstreams,
-		StreamZoneSync:         streamZoneSync,
-		LocationZones:          *locationZones,
-		Resolvers:              *resolvers,
-		HTTPLimitRequests:      *limitReqs,
-		HTTPLimitConnections:   *limitConnsHTTP,
-		StreamLimitConnections: *limitConnsStream,
-		Workers:                workers,
-	}, nil
+	// Report connection metrics separately so it does not influence the results
+	var connectionsGroup errgroup.Group
+	connectionsGroup.Go(func() error {
+		connections, err := client.GetConnections()
+		if err != nil {
+			return fmt.Errorf("failed to get connections: %w", err)
+		}
+		mu.Lock()
+		stats.Connections = *connections
+		mu.Unlock()
+		return nil
+	})
+
+	if err := connectionsGroup.Wait(); err != nil {
+		return nil, fmt.Errorf("connections metrics not found: %w", err)
+	}
+
+	return &stats.Stats, nil
 }
 
 // GetAvailableEndpoints returns available endpoints in the API.
