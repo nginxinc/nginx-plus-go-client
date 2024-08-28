@@ -149,7 +149,7 @@ func defaultStats() *extendedStats {
 			HTTPLimitRequests:      map[string]HTTPLimitRequest{},
 			Resolvers:              map[string]Resolver{},
 			LocationZones:          map[string]LocationZone{},
-			StreamZoneSync:         &StreamZoneSync{},
+			StreamZoneSync:         nil,
 			Workers:                []*Workers{},
 			NginxInfo:              NginxInfo{},
 			SSL:                    SSL{},
