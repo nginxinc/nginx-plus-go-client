@@ -927,13 +927,13 @@ func (client *NginxClient) getIDOfHTTPServer(upstream string, name string) (int,
 }
 
 func (client *NginxClient) get(path string, data interface{}) error {
-	return client.getWithContext(context.Background(), path, data)
+	timeoutCtx, cancel := context.WithTimeout(context.Background(), client.ctxTimeout)
+	defer cancel()
+
+	return client.getWithContext(timeoutCtx, path, data)
 }
 
 func (client *NginxClient) getWithContext(ctx context.Context, path string, data interface{}) error {
-	ctx, cancel := context.WithTimeout(ctx, client.ctxTimeout)
-	defer cancel()
-
 	url := fmt.Sprintf("%v/%v/%v", client.apiEndpoint, client.apiVersion, path)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -965,13 +965,13 @@ func (client *NginxClient) getWithContext(ctx context.Context, path string, data
 }
 
 func (client *NginxClient) post(path string, input interface{}) error {
-	return client.postWithContext(context.Background(), path, input)
+	timeoutCtx, cancel := context.WithTimeout(context.Background(), client.ctxTimeout)
+	defer cancel()
+
+	return client.postWithContext(timeoutCtx, path, input)
 }
 
 func (client *NginxClient) postWithContext(ctx context.Context, path string, input interface{}) error {
-	ctx, cancel := context.WithTimeout(ctx, client.ctxTimeout)
-	defer cancel()
-
 	url := fmt.Sprintf("%v/%v/%v", client.apiEndpoint, client.apiVersion, path)
 
 	jsonInput, err := json.Marshal(input)
@@ -1001,13 +1001,13 @@ func (client *NginxClient) postWithContext(ctx context.Context, path string, inp
 }
 
 func (client *NginxClient) delete(path string, expectedStatusCode int) error {
-	return client.deleteWithContext(context.Background(), path, expectedStatusCode)
+	timeoutCtx, cancel := context.WithTimeout(context.Background(), client.ctxTimeout)
+	defer cancel()
+
+	return client.deleteWithContext(timeoutCtx, path, expectedStatusCode)
 }
 
 func (client *NginxClient) deleteWithContext(ctx context.Context, path string, expectedStatusCode int) error {
-	ctx, cancel := context.WithTimeout(ctx, client.ctxTimeout)
-	defer cancel()
-
 	path = fmt.Sprintf("%v/%v/%v/", client.apiEndpoint, client.apiVersion, path)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, path, nil)
@@ -1030,13 +1030,13 @@ func (client *NginxClient) deleteWithContext(ctx context.Context, path string, e
 }
 
 func (client *NginxClient) patch(path string, input interface{}, expectedStatusCode int) error {
-	return client.patchWithContext(context.Background(), path, input, expectedStatusCode)
+	timeoutCtx, cancel := context.WithTimeout(context.Background(), client.ctxTimeout)
+	defer cancel()
+
+	return client.patchWithContext(timeoutCtx, path, input, expectedStatusCode)
 }
 
 func (client *NginxClient) patchWithContext(ctx context.Context, path string, input interface{}, expectedStatusCode int) error {
-	ctx, cancel := context.WithTimeout(ctx, client.ctxTimeout)
-	defer cancel()
-
 	path = fmt.Sprintf("%v/%v/%v/", client.apiEndpoint, client.apiVersion, path)
 
 	jsonInput, err := json.Marshal(input)
