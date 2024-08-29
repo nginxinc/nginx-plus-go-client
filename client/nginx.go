@@ -927,7 +927,11 @@ func (client *NginxClient) getIDOfHTTPServer(upstream string, name string) (int,
 }
 
 func (client *NginxClient) get(path string, data interface{}) error {
-	ctx, cancel := context.WithTimeout(context.Background(), client.ctxTimeout)
+	return client.getWithContext(context.Background(), path, data)
+}
+
+func (client *NginxClient) getWithContext(ctx context.Context, path string, data interface{}) error {
+	ctx, cancel := context.WithTimeout(ctx, client.ctxTimeout)
 	defer cancel()
 
 	url := fmt.Sprintf("%v/%v/%v", client.apiEndpoint, client.apiVersion, path)
@@ -961,7 +965,11 @@ func (client *NginxClient) get(path string, data interface{}) error {
 }
 
 func (client *NginxClient) post(path string, input interface{}) error {
-	ctx, cancel := context.WithTimeout(context.Background(), client.ctxTimeout)
+	return client.postWithConext(context.Background(), path, input)
+}
+
+func (client *NginxClient) postWithConext(ctx context.Context, path string, input interface{}) error {
+	ctx, cancel := context.WithTimeout(ctx, client.ctxTimeout)
 	defer cancel()
 
 	url := fmt.Sprintf("%v/%v/%v", client.apiEndpoint, client.apiVersion, path)
@@ -993,7 +1001,11 @@ func (client *NginxClient) post(path string, input interface{}) error {
 }
 
 func (client *NginxClient) delete(path string, expectedStatusCode int) error {
-	ctx, cancel := context.WithTimeout(context.Background(), client.ctxTimeout)
+	return client.deleteWithContext(context.Background(), path, expectedStatusCode)
+}
+
+func (client *NginxClient) deleteWithContext(ctx context.Context, path string, expectedStatusCode int) error {
+	ctx, cancel := context.WithTimeout(ctx, client.ctxTimeout)
 	defer cancel()
 
 	path = fmt.Sprintf("%v/%v/%v/", client.apiEndpoint, client.apiVersion, path)
@@ -1018,7 +1030,11 @@ func (client *NginxClient) delete(path string, expectedStatusCode int) error {
 }
 
 func (client *NginxClient) patch(path string, input interface{}, expectedStatusCode int) error {
-	ctx, cancel := context.WithTimeout(context.Background(), client.ctxTimeout)
+	return client.patchWithContext(context.Background(), path, input, expectedStatusCode)
+}
+
+func (client *NginxClient) patchWithContext(ctx context.Context, path string, input interface{}, expectedStatusCode int) error {
+	ctx, cancel := context.WithTimeout(ctx, client.ctxTimeout)
 	defer cancel()
 
 	path = fmt.Sprintf("%v/%v/%v/", client.apiEndpoint, client.apiVersion, path)
@@ -1236,15 +1252,15 @@ func determineStreamUpdates(updatedServers []StreamUpstreamServer, nginxServers 
 	return
 }
 
-// GetStats gets process, slab, connection, request, ssl, zone, stream zone, upstream and stream upstream related stats from the NGINX Plus API.
-func (client *NginxClient) GetStats() (*Stats, error) {
-	var g errgroup.Group
+// GetStatsWithContext gets process, slab, connection, request, ssl, zone, stream zone, upstream and stream upstream related stats from the NGINX Plus API.
+func (client *NginxClient) GetStatsWithContext(ctx context.Context) (*Stats, error) {
+	initialGroup, initialCtx := errgroup.WithContext(ctx)
 	var mu sync.Mutex
 	stats := defaultStats()
 	// Collecting initial stats
-	g.Go(func() error {
+	initialGroup.Go(func() error {
 		mu.Lock()
-		endpoints, err := client.GetAvailableEndpoints()
+		endpoints, err := client.GetAvailableEndpointsWithContext(initialCtx)
 		mu.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to get available Endpoints: %w", err)
@@ -1253,9 +1269,9 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 		return nil
 	})
 
-	g.Go(func() error {
+	initialGroup.Go(func() error {
 		mu.Lock()
-		nginxInfo, err := client.GetNginxInfo()
+		nginxInfo, err := client.GetNginxInfoWithContext(initialCtx)
 		mu.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to get NGINX info: %w", err)
@@ -1264,9 +1280,9 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 		return nil
 	})
 
-	g.Go(func() error {
+	initialGroup.Go(func() error {
 		mu.Lock()
-		caches, err := client.GetCaches()
+		caches, err := client.GetCachesWithContext(initialCtx)
 		mu.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to get Caches: %w", err)
@@ -1275,9 +1291,9 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 		return nil
 	})
 
-	g.Go(func() error {
+	initialGroup.Go(func() error {
 		mu.Lock()
-		processes, err := client.GetProcesses()
+		processes, err := client.GetProcessesWithContext(initialCtx)
 		mu.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to get Process information: %w", err)
@@ -1286,9 +1302,9 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 		return nil
 	})
 
-	g.Go(func() error {
+	initialGroup.Go(func() error {
 		mu.Lock()
-		slabs, err := client.GetSlabs()
+		slabs, err := client.GetSlabsWithContext(initialCtx)
 		mu.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to get Slabs: %w", err)
@@ -1297,9 +1313,9 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 		return nil
 	})
 
-	g.Go(func() error {
+	initialGroup.Go(func() error {
 		mu.Lock()
-		httpRequests, err := client.GetHTTPRequests()
+		httpRequests, err := client.GetHTTPRequestsWithContext(initialCtx)
 		mu.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to get HTTP Requests: %w", err)
@@ -1308,9 +1324,9 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 		return nil
 	})
 
-	g.Go(func() error {
+	initialGroup.Go(func() error {
 		mu.Lock()
-		ssl, err := client.GetSSL()
+		ssl, err := client.GetSSLWithContext(initialCtx)
 		mu.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to get SSL: %w", err)
@@ -1319,9 +1335,9 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 		return nil
 	})
 
-	g.Go(func() error {
+	initialGroup.Go(func() error {
 		mu.Lock()
-		serverZones, err := client.GetServerZones()
+		serverZones, err := client.GetServerZonesWithContext(initialCtx)
 		mu.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to get Server Zones: %w", err)
@@ -1330,9 +1346,9 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 		return nil
 	})
 
-	g.Go(func() error {
+	initialGroup.Go(func() error {
 		mu.Lock()
-		upstreams, err := client.GetUpstreams()
+		upstreams, err := client.GetUpstreamsWithContext(initialCtx)
 		mu.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to get Upstreams: %w", err)
@@ -1341,9 +1357,9 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 		return nil
 	})
 
-	g.Go(func() error {
+	initialGroup.Go(func() error {
 		mu.Lock()
-		locationZones, err := client.GetLocationZones()
+		locationZones, err := client.GetLocationZonesWithContext(initialCtx)
 		mu.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to get Location Zones: %w", err)
@@ -1352,9 +1368,9 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 		return nil
 	})
 
-	g.Go(func() error {
+	initialGroup.Go(func() error {
 		mu.Lock()
-		resolvers, err := client.GetResolvers()
+		resolvers, err := client.GetResolversWithContext(initialCtx)
 		mu.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to get Resolvers: %w", err)
@@ -1363,9 +1379,9 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 		return nil
 	})
 
-	g.Go(func() error {
+	initialGroup.Go(func() error {
 		mu.Lock()
-		httpLimitRequests, err := client.GetHTTPLimitReqs()
+		httpLimitRequests, err := client.GetHTTPLimitReqsWithContext(initialCtx)
 		mu.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to get HTTPLimitRequests: %w", err)
@@ -1374,9 +1390,9 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 		return nil
 	})
 
-	g.Go(func() error {
+	initialGroup.Go(func() error {
 		mu.Lock()
-		httpLimitConnections, err := client.GetHTTPConnectionsLimit()
+		httpLimitConnections, err := client.GetHTTPConnectionsLimitWithContext(initialCtx)
 		mu.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to get HTTPLimitConnections: %w", err)
@@ -1385,9 +1401,9 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 		return nil
 	})
 
-	g.Go(func() error {
+	initialGroup.Go(func() error {
 		mu.Lock()
-		workers, err := client.GetWorkers()
+		workers, err := client.GetWorkersWithContext(initialCtx)
 		mu.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to get Workers: %w", err)
@@ -1396,17 +1412,17 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 		return nil
 	})
 
-	if err := g.Wait(); err != nil {
+	if err := initialGroup.Wait(); err != nil {
 		return nil, fmt.Errorf("error returned from contacting Plus API: %w", err)
 	}
 
 	// Process stream endpoints if they exist
 	if slices.Contains(stats.endpoints, "stream") {
-		var streamGroup errgroup.Group
+		availableStreamGroup, asgCtx := errgroup.WithContext(ctx)
 
-		streamGroup.Go(func() error {
+		availableStreamGroup.Go(func() error {
 			mu.Lock()
-			streamEndpoints, err := client.GetAvailableStreamEndpoints()
+			streamEndpoints, err := client.GetAvailableStreamEndpointsWithContext(asgCtx)
 			mu.Unlock()
 			if err != nil {
 				return fmt.Errorf("failed to get available Stream Endpoints: %w", err)
@@ -1415,9 +1431,15 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 			return nil
 		})
 
+		if err := availableStreamGroup.Wait(); err != nil {
+			return nil, fmt.Errorf("no useful metrics found in stream stats: %w", err)
+		}
+
+		streamGroup, sgCtx := errgroup.WithContext(ctx)
+
 		if slices.Contains(stats.streamEndpoints, "server_zones") {
 			streamGroup.Go(func() error {
-				streamServerZones, err := client.GetStreamServerZones()
+				streamServerZones, err := client.GetStreamServerZonesWithContext(sgCtx)
 				if err != nil {
 					return fmt.Errorf("failed to get streamServerZones: %w", err)
 				}
@@ -1430,7 +1452,7 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 
 		if slices.Contains(stats.streamEndpoints, "upstreams") {
 			streamGroup.Go(func() error {
-				streamUpstreams, err := client.GetStreamUpstreams()
+				streamUpstreams, err := client.GetStreamUpstreamsWithContext(sgCtx)
 				if err != nil {
 					return fmt.Errorf("failed to get StreamUpstreams: %w", err)
 				}
@@ -1444,7 +1466,7 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 
 		if slices.Contains(stats.streamEndpoints, "limit_conns") {
 			streamGroup.Go(func() error {
-				streamConnectionsLimit, err := client.GetStreamConnectionsLimit()
+				streamConnectionsLimit, err := client.GetStreamConnectionsLimitWithContext(sgCtx)
 				if err != nil {
 					return fmt.Errorf("failed to get StreamLimitConnections: %w", err)
 				}
@@ -1455,7 +1477,7 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 			})
 
 			streamGroup.Go(func() error {
-				streamZoneSync, err := client.GetStreamZoneSync()
+				streamZoneSync, err := client.GetStreamZoneSyncWithContext(sgCtx)
 				if err != nil {
 					return fmt.Errorf("failed to get StreamZoneSync: %w", err)
 				}
@@ -1472,9 +1494,11 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 	}
 
 	// Report connection metrics separately so it does not influence the results
-	var connectionsGroup errgroup.Group
+	connectionsGroup, cgCtx := errgroup.WithContext(ctx)
+
 	connectionsGroup.Go(func() error {
-		connections, err := client.GetConnections()
+		// replace this call with a context specific call
+		connections, err := client.GetConnectionsWithContext(cgCtx)
 		if err != nil {
 			return fmt.Errorf("failed to get connections: %w", err)
 		}
@@ -1491,10 +1515,20 @@ func (client *NginxClient) GetStats() (*Stats, error) {
 	return &stats.Stats, nil
 }
 
+// GetStats gets process, slab, connection, request, ssl, zone, stream zone, upstream and stream upstream related stats from the NGINX Plus API.
+func (client *NginxClient) GetStats() (*Stats, error) {
+	return client.GetStatsWithContext(context.Background())
+}
+
 // GetAvailableEndpoints returns available endpoints in the API.
 func (client *NginxClient) GetAvailableEndpoints() ([]string, error) {
+	return client.GetAvailableEndpointsWithContext(context.Background())
+}
+
+// GetAvailableEndpointsWithContext returns available endpoints in the API.
+func (client *NginxClient) GetAvailableEndpointsWithContext(ctx context.Context) ([]string, error) {
 	var endpoints []string
-	err := client.get("", &endpoints)
+	err := client.getWithContext(ctx, "", &endpoints)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get endpoints: %w", err)
 	}
@@ -1503,8 +1537,13 @@ func (client *NginxClient) GetAvailableEndpoints() ([]string, error) {
 
 // GetAvailableStreamEndpoints returns available stream endpoints in the API.
 func (client *NginxClient) GetAvailableStreamEndpoints() ([]string, error) {
+	return client.GetAvailableStreamEndpointsWithContext(context.Background())
+}
+
+// GetAvailableStreamEndpointsWithContext returns available stream endpoints in the API with a context.
+func (client *NginxClient) GetAvailableStreamEndpointsWithContext(ctx context.Context) ([]string, error) {
 	var endpoints []string
-	err := client.get("stream", &endpoints)
+	err := client.getWithContext(ctx, "stream", &endpoints)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get endpoints: %w", err)
 	}
@@ -1513,8 +1552,13 @@ func (client *NginxClient) GetAvailableStreamEndpoints() ([]string, error) {
 
 // GetNginxInfo returns Nginx stats.
 func (client *NginxClient) GetNginxInfo() (*NginxInfo, error) {
+	return client.GetNginxInfoWithContext(context.Background())
+}
+
+// GetNginxInfoWithContext returns Nginx stats with a context.
+func (client *NginxClient) GetNginxInfoWithContext(ctx context.Context) (*NginxInfo, error) {
 	var info NginxInfo
-	err := client.get("nginx", &info)
+	err := client.getWithContext(ctx, "nginx", &info)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get info: %w", err)
 	}
@@ -1523,8 +1567,13 @@ func (client *NginxClient) GetNginxInfo() (*NginxInfo, error) {
 
 // GetCaches returns Cache stats.
 func (client *NginxClient) GetCaches() (*Caches, error) {
+	return client.GetCachesWithContext(context.Background())
+}
+
+// GetCachesWithContext returns Cache stats with a context.
+func (client *NginxClient) GetCachesWithContext(ctx context.Context) (*Caches, error) {
 	var caches Caches
-	err := client.get("http/caches", &caches)
+	err := client.getWithContext(ctx, "http/caches", &caches)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get caches: %w", err)
 	}
@@ -1533,8 +1582,13 @@ func (client *NginxClient) GetCaches() (*Caches, error) {
 
 // GetSlabs returns Slabs stats.
 func (client *NginxClient) GetSlabs() (*Slabs, error) {
+	return client.GetSlabsWithContext(context.Background())
+}
+
+// GetSlabsWithContext returns Slabs stats with a context.
+func (client *NginxClient) GetSlabsWithContext(ctx context.Context) (*Slabs, error) {
 	var slabs Slabs
-	err := client.get("slabs", &slabs)
+	err := client.getWithContext(ctx, "slabs", &slabs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get slabs: %w", err)
 	}
@@ -1543,8 +1597,13 @@ func (client *NginxClient) GetSlabs() (*Slabs, error) {
 
 // GetConnections returns Connections stats.
 func (client *NginxClient) GetConnections() (*Connections, error) {
+	return client.GetConnectionsWithContext(context.Background())
+}
+
+// GetConnectionsWithContext returns Connections stats with a context.
+func (client *NginxClient) GetConnectionsWithContext(ctx context.Context) (*Connections, error) {
 	var cons Connections
-	err := client.get("connections", &cons)
+	err := client.getWithContext(ctx, "connections", &cons)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get connections: %w", err)
 	}
@@ -1553,8 +1612,13 @@ func (client *NginxClient) GetConnections() (*Connections, error) {
 
 // GetHTTPRequests returns http/requests stats.
 func (client *NginxClient) GetHTTPRequests() (*HTTPRequests, error) {
+	return client.GetHTTPRequestsWithContext(context.Background())
+}
+
+// GetHTTPRequestsWithContext returns http/requests stats with a context.
+func (client *NginxClient) GetHTTPRequestsWithContext(ctx context.Context) (*HTTPRequests, error) {
 	var requests HTTPRequests
-	err := client.get("http/requests", &requests)
+	err := client.getWithContext(ctx, "http/requests", &requests)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get http requests: %w", err)
 	}
@@ -1563,8 +1627,13 @@ func (client *NginxClient) GetHTTPRequests() (*HTTPRequests, error) {
 
 // GetSSL returns SSL stats.
 func (client *NginxClient) GetSSL() (*SSL, error) {
+	return client.GetSSLWithContext(context.Background())
+}
+
+// GetSSLWithContext returns SSL stats with a context.
+func (client *NginxClient) GetSSLWithContext(ctx context.Context) (*SSL, error) {
 	var ssl SSL
-	err := client.get("ssl", &ssl)
+	err := client.getWithContext(ctx, "ssl", &ssl)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ssl: %w", err)
 	}
@@ -1573,8 +1642,13 @@ func (client *NginxClient) GetSSL() (*SSL, error) {
 
 // GetServerZones returns http/server_zones stats.
 func (client *NginxClient) GetServerZones() (*ServerZones, error) {
+	return client.GetServerZonesWithContext(context.Background())
+}
+
+// GetServerZonesWithContext returns http/server_zones stats with a context.
+func (client *NginxClient) GetServerZonesWithContext(ctx context.Context) (*ServerZones, error) {
 	var zones ServerZones
-	err := client.get("http/server_zones", &zones)
+	err := client.getWithContext(ctx, "http/server_zones", &zones)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get server zones: %w", err)
 	}
@@ -1583,8 +1657,13 @@ func (client *NginxClient) GetServerZones() (*ServerZones, error) {
 
 // GetStreamServerZones returns stream/server_zones stats.
 func (client *NginxClient) GetStreamServerZones() (*StreamServerZones, error) {
+	return client.GetStreamServerZonesWithContext(context.Background())
+}
+
+// GetStreamServerZonesWithContext returns stream/server_zones stats with a context.
+func (client *NginxClient) GetStreamServerZonesWithContext(ctx context.Context) (*StreamServerZones, error) {
 	var zones StreamServerZones
-	err := client.get("stream/server_zones", &zones)
+	err := client.getWithContext(ctx, "stream/server_zones", &zones)
 	if err != nil {
 		var ie *internalError
 		if errors.As(err, &ie) {
@@ -1599,8 +1678,13 @@ func (client *NginxClient) GetStreamServerZones() (*StreamServerZones, error) {
 
 // GetUpstreams returns http/upstreams stats.
 func (client *NginxClient) GetUpstreams() (*Upstreams, error) {
+	return client.GetUpstreamsWithContext(context.Background())
+}
+
+// GetUpstreamsWithContext returns http/upstreams stats with a context.
+func (client *NginxClient) GetUpstreamsWithContext(ctx context.Context) (*Upstreams, error) {
 	var upstreams Upstreams
-	err := client.get("http/upstreams", &upstreams)
+	err := client.getWithContext(ctx, "http/upstreams", &upstreams)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get upstreams: %w", err)
 	}
@@ -1609,8 +1693,13 @@ func (client *NginxClient) GetUpstreams() (*Upstreams, error) {
 
 // GetStreamUpstreams returns stream/upstreams stats.
 func (client *NginxClient) GetStreamUpstreams() (*StreamUpstreams, error) {
+	return client.GetStreamUpstreamsWithContext(context.Background())
+}
+
+// GetStreamUpstreamsWithContext returns stream/upstreams stats with a context.
+func (client *NginxClient) GetStreamUpstreamsWithContext(ctx context.Context) (*StreamUpstreams, error) {
 	var upstreams StreamUpstreams
-	err := client.get("stream/upstreams", &upstreams)
+	err := client.getWithContext(ctx, "stream/upstreams", &upstreams)
 	if err != nil {
 		var ie *internalError
 		if errors.As(err, &ie) {
@@ -1625,8 +1714,13 @@ func (client *NginxClient) GetStreamUpstreams() (*StreamUpstreams, error) {
 
 // GetStreamZoneSync returns stream/zone_sync stats.
 func (client *NginxClient) GetStreamZoneSync() (*StreamZoneSync, error) {
+	return client.GetStreamZoneSyncWithContext(context.Background())
+}
+
+// GetStreamZoneSyncWithContext returns stream/zone_sync stats with a context.
+func (client *NginxClient) GetStreamZoneSyncWithContext(ctx context.Context) (*StreamZoneSync, error) {
 	var streamZoneSync StreamZoneSync
-	err := client.get("stream/zone_sync", &streamZoneSync)
+	err := client.getWithContext(ctx, "stream/zone_sync", &streamZoneSync)
 	if err != nil {
 		var ie *internalError
 		if errors.As(err, &ie) {
@@ -1642,11 +1736,16 @@ func (client *NginxClient) GetStreamZoneSync() (*StreamZoneSync, error) {
 
 // GetLocationZones returns http/location_zones stats.
 func (client *NginxClient) GetLocationZones() (*LocationZones, error) {
+	return client.GetLocationZonesWithContext(context.Background())
+}
+
+// GetLocationZonesWithContext returns http/location_zones stats with a context.
+func (client *NginxClient) GetLocationZonesWithContext(ctx context.Context) (*LocationZones, error) {
 	var locationZones LocationZones
 	if client.apiVersion < 5 {
 		return &locationZones, nil
 	}
-	err := client.get("http/location_zones", &locationZones)
+	err := client.getWithContext(ctx, "http/location_zones", &locationZones)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get location zones: %w", err)
 	}
@@ -1656,11 +1755,16 @@ func (client *NginxClient) GetLocationZones() (*LocationZones, error) {
 
 // GetResolvers returns Resolvers stats.
 func (client *NginxClient) GetResolvers() (*Resolvers, error) {
+	return client.GetResolversWithContext(context.Background())
+}
+
+// GetResolversWithContext returns Resolvers stats with a context.
+func (client *NginxClient) GetResolversWithContext(ctx context.Context) (*Resolvers, error) {
 	var resolvers Resolvers
 	if client.apiVersion < 5 {
 		return &resolvers, nil
 	}
-	err := client.get("resolvers", &resolvers)
+	err := client.getWithContext(ctx, "resolvers", &resolvers)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get resolvers: %w", err)
 	}
@@ -1670,8 +1774,13 @@ func (client *NginxClient) GetResolvers() (*Resolvers, error) {
 
 // GetProcesses returns Processes stats.
 func (client *NginxClient) GetProcesses() (*Processes, error) {
+	return client.GetProcessesWithContext(context.Background())
+}
+
+// GetProcessesWithContext returns Processes stats with a context.
+func (client *NginxClient) GetProcessesWithContext(ctx context.Context) (*Processes, error) {
 	var processes Processes
-	err := client.get("processes", &processes)
+	err := client.getWithContext(ctx, "processes", &processes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get processes: %w", err)
 	}
@@ -1901,11 +2010,16 @@ func addPortToServer(server string) string {
 
 // GetHTTPLimitReqs returns http/limit_reqs stats.
 func (client *NginxClient) GetHTTPLimitReqs() (*HTTPLimitRequests, error) {
+	return client.GetHTTPLimitReqsWithContext(context.Background())
+}
+
+// GetHTTPLimitReqsWithContext returns http/limit_reqs stats with a context.
+func (client *NginxClient) GetHTTPLimitReqsWithContext(ctx context.Context) (*HTTPLimitRequests, error) {
 	var limitReqs HTTPLimitRequests
 	if client.apiVersion < 6 {
 		return &limitReqs, nil
 	}
-	err := client.get("http/limit_reqs", &limitReqs)
+	err := client.getWithContext(ctx, "http/limit_reqs", &limitReqs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get http limit requests: %w", err)
 	}
@@ -1914,11 +2028,16 @@ func (client *NginxClient) GetHTTPLimitReqs() (*HTTPLimitRequests, error) {
 
 // GetHTTPConnectionsLimit returns http/limit_conns stats.
 func (client *NginxClient) GetHTTPConnectionsLimit() (*HTTPLimitConnections, error) {
+	return client.GetHTTPConnectionsLimitWithContext(context.Background())
+}
+
+// GetHTTPConnectionsLimitWithContext returns http/limit_conns stats with a context.
+func (client *NginxClient) GetHTTPConnectionsLimitWithContext(ctx context.Context) (*HTTPLimitConnections, error) {
 	var limitConns HTTPLimitConnections
 	if client.apiVersion < 6 {
 		return &limitConns, nil
 	}
-	err := client.get("http/limit_conns", &limitConns)
+	err := client.getWithContext(ctx, "http/limit_conns", &limitConns)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get http connections limit: %w", err)
 	}
@@ -1927,11 +2046,16 @@ func (client *NginxClient) GetHTTPConnectionsLimit() (*HTTPLimitConnections, err
 
 // GetStreamConnectionsLimit returns stream/limit_conns stats.
 func (client *NginxClient) GetStreamConnectionsLimit() (*StreamLimitConnections, error) {
+	return client.GetStreamConnectionsLimitWithContext(context.Background())
+}
+
+// GetStreamConnectionsLimitWithContext returns stream/limit_conns stats with a context.
+func (client *NginxClient) GetStreamConnectionsLimitWithContext(ctx context.Context) (*StreamLimitConnections, error) {
 	var limitConns StreamLimitConnections
 	if client.apiVersion < 6 {
 		return &limitConns, nil
 	}
-	err := client.get("stream/limit_conns", &limitConns)
+	err := client.getWithContext(ctx, "stream/limit_conns", &limitConns)
 	if err != nil {
 		var ie *internalError
 		if errors.As(err, &ie) {
@@ -1946,11 +2070,16 @@ func (client *NginxClient) GetStreamConnectionsLimit() (*StreamLimitConnections,
 
 // GetWorkers returns workers stats.
 func (client *NginxClient) GetWorkers() ([]*Workers, error) {
+	return client.GetWorkersWithContext(context.Background())
+}
+
+// GetWorkersWithContext returns workers stats with a context.
+func (client *NginxClient) GetWorkersWithContext(ctx context.Context) ([]*Workers, error) {
 	var workers []*Workers
 	if client.apiVersion < 9 {
 		return workers, nil
 	}
-	err := client.get("workers", &workers)
+	err := client.getWithContext(ctx, "workers", &workers)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get workers: %w", err)
 	}
