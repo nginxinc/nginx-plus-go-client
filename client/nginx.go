@@ -965,10 +965,10 @@ func (client *NginxClient) getWithContext(ctx context.Context, path string, data
 }
 
 func (client *NginxClient) post(path string, input interface{}) error {
-	return client.postWithConext(context.Background(), path, input)
+	return client.postWithContext(context.Background(), path, input)
 }
 
-func (client *NginxClient) postWithConext(ctx context.Context, path string, input interface{}) error {
+func (client *NginxClient) postWithContext(ctx context.Context, path string, input interface{}) error {
 	ctx, cancel := context.WithTimeout(ctx, client.ctxTimeout)
 	defer cancel()
 
@@ -1259,156 +1259,183 @@ func (client *NginxClient) GetStatsWithContext(ctx context.Context) (*Stats, err
 	stats := defaultStats()
 	// Collecting initial stats
 	initialGroup.Go(func() error {
-		mu.Lock()
 		endpoints, err := client.GetAvailableEndpointsWithContext(initialCtx)
-		mu.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to get available Endpoints: %w", err)
 		}
+
+		mu.Lock()
 		stats.endpoints = endpoints
+		mu.Unlock()
 		return nil
 	})
 
 	initialGroup.Go(func() error {
-		mu.Lock()
 		nginxInfo, err := client.GetNginxInfoWithContext(initialCtx)
-		mu.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to get NGINX info: %w", err)
 		}
+
+		mu.Lock()
 		stats.NginxInfo = *nginxInfo
+		mu.Unlock()
+
 		return nil
 	})
 
 	initialGroup.Go(func() error {
-		mu.Lock()
 		caches, err := client.GetCachesWithContext(initialCtx)
-		mu.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to get Caches: %w", err)
 		}
+
+		mu.Lock()
 		stats.Caches = *caches
+		mu.Unlock()
+
 		return nil
 	})
 
 	initialGroup.Go(func() error {
-		mu.Lock()
 		processes, err := client.GetProcessesWithContext(initialCtx)
-		mu.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to get Process information: %w", err)
 		}
+
+		mu.Lock()
 		stats.Processes = *processes
+		mu.Unlock()
+
 		return nil
 	})
 
 	initialGroup.Go(func() error {
-		mu.Lock()
 		slabs, err := client.GetSlabsWithContext(initialCtx)
-		mu.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to get Slabs: %w", err)
 		}
+
+		mu.Lock()
 		stats.Slabs = *slabs
+		mu.Unlock()
+
 		return nil
 	})
 
 	initialGroup.Go(func() error {
-		mu.Lock()
 		httpRequests, err := client.GetHTTPRequestsWithContext(initialCtx)
-		mu.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to get HTTP Requests: %w", err)
 		}
+
+		mu.Lock()
 		stats.HTTPRequests = *httpRequests
+		mu.Unlock()
+
 		return nil
 	})
 
 	initialGroup.Go(func() error {
-		mu.Lock()
 		ssl, err := client.GetSSLWithContext(initialCtx)
-		mu.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to get SSL: %w", err)
 		}
+
+		mu.Lock()
 		stats.SSL = *ssl
+		mu.Unlock()
+
 		return nil
 	})
 
 	initialGroup.Go(func() error {
-		mu.Lock()
 		serverZones, err := client.GetServerZonesWithContext(initialCtx)
-		mu.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to get Server Zones: %w", err)
 		}
+
+		mu.Lock()
 		stats.ServerZones = *serverZones
+		mu.Unlock()
+
 		return nil
 	})
 
 	initialGroup.Go(func() error {
-		mu.Lock()
 		upstreams, err := client.GetUpstreamsWithContext(initialCtx)
-		mu.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to get Upstreams: %w", err)
 		}
+
+		mu.Lock()
 		stats.Upstreams = *upstreams
+		mu.Unlock()
+
 		return nil
 	})
 
 	initialGroup.Go(func() error {
-		mu.Lock()
 		locationZones, err := client.GetLocationZonesWithContext(initialCtx)
-		mu.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to get Location Zones: %w", err)
 		}
+
+		mu.Lock()
 		stats.LocationZones = *locationZones
+		mu.Unlock()
+
 		return nil
 	})
 
 	initialGroup.Go(func() error {
-		mu.Lock()
 		resolvers, err := client.GetResolversWithContext(initialCtx)
-		mu.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to get Resolvers: %w", err)
 		}
+
+		mu.Lock()
 		stats.Resolvers = *resolvers
+		mu.Unlock()
+
 		return nil
 	})
 
 	initialGroup.Go(func() error {
-		mu.Lock()
 		httpLimitRequests, err := client.GetHTTPLimitReqsWithContext(initialCtx)
-		mu.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to get HTTPLimitRequests: %w", err)
 		}
+
+		mu.Lock()
 		stats.HTTPLimitRequests = *httpLimitRequests
+		mu.Unlock()
+
 		return nil
 	})
 
 	initialGroup.Go(func() error {
-		mu.Lock()
 		httpLimitConnections, err := client.GetHTTPConnectionsLimitWithContext(initialCtx)
-		mu.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to get HTTPLimitConnections: %w", err)
 		}
+
+		mu.Lock()
 		stats.HTTPLimitConnections = *httpLimitConnections
+		mu.Unlock()
+
 		return nil
 	})
 
 	initialGroup.Go(func() error {
-		mu.Lock()
 		workers, err := client.GetWorkersWithContext(initialCtx)
-		mu.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to get Workers: %w", err)
 		}
+
+		mu.Lock()
 		stats.Workers = workers
+		mu.Unlock()
+
 		return nil
 	})
 
@@ -1421,13 +1448,15 @@ func (client *NginxClient) GetStatsWithContext(ctx context.Context) (*Stats, err
 		availableStreamGroup, asgCtx := errgroup.WithContext(ctx)
 
 		availableStreamGroup.Go(func() error {
-			mu.Lock()
 			streamEndpoints, err := client.GetAvailableStreamEndpointsWithContext(asgCtx)
-			mu.Unlock()
 			if err != nil {
 				return fmt.Errorf("failed to get available Stream Endpoints: %w", err)
 			}
+
+			mu.Lock()
 			stats.streamEndpoints = streamEndpoints
+			mu.Unlock()
+
 			return nil
 		})
 
@@ -1443,9 +1472,11 @@ func (client *NginxClient) GetStatsWithContext(ctx context.Context) (*Stats, err
 				if err != nil {
 					return fmt.Errorf("failed to get streamServerZones: %w", err)
 				}
+
 				mu.Lock()
 				stats.StreamServerZones = *streamServerZones
 				mu.Unlock()
+
 				return nil
 			})
 		}
@@ -1456,6 +1487,7 @@ func (client *NginxClient) GetStatsWithContext(ctx context.Context) (*Stats, err
 				if err != nil {
 					return fmt.Errorf("failed to get StreamUpstreams: %w", err)
 				}
+
 				mu.Lock()
 				stats.StreamUpstreams = *streamUpstreams
 				mu.Unlock()
@@ -1470,9 +1502,11 @@ func (client *NginxClient) GetStatsWithContext(ctx context.Context) (*Stats, err
 				if err != nil {
 					return fmt.Errorf("failed to get StreamLimitConnections: %w", err)
 				}
+
 				mu.Lock()
 				stats.StreamLimitConnections = *streamConnectionsLimit
 				mu.Unlock()
+
 				return nil
 			})
 
@@ -1481,9 +1515,11 @@ func (client *NginxClient) GetStatsWithContext(ctx context.Context) (*Stats, err
 				if err != nil {
 					return fmt.Errorf("failed to get StreamZoneSync: %w", err)
 				}
+
 				mu.Lock()
 				stats.StreamZoneSync = streamZoneSync
 				mu.Unlock()
+
 				return nil
 			})
 		}
@@ -1502,9 +1538,11 @@ func (client *NginxClient) GetStatsWithContext(ctx context.Context) (*Stats, err
 		if err != nil {
 			return fmt.Errorf("failed to get connections: %w", err)
 		}
+
 		mu.Lock()
 		stats.Connections = *connections
 		mu.Unlock()
+
 		return nil
 	})
 
