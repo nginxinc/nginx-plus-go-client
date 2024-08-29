@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -638,11 +639,16 @@ func TestGetStats_NoStreamEndpoint(t *testing.T) {
 	}
 	var err error
 	var client *NginxClient
+	var writeLock sync.Mutex
 
 	t.Parallel()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		writeLock.Lock()
+		defer writeLock.Unlock()
+
 		switch {
 		case r.RequestURI == "/":
+
 			_, err = w.Write([]byte(`[4, 5, 6, 7, 8, 9]`))
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
