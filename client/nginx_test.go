@@ -1,10 +1,12 @@
 package client
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -622,23 +624,44 @@ func TestClientWithHTTPClient(t *testing.T) {
 }
 
 func TestGetStats_NoStreamEndpoint(t *testing.T) {
+	tests := []struct {
+		ctx  context.Context
+		name string
+	}{
+		{
+			ctx:  nil,
+			name: "no context test",
+		},
+		{
+			ctx:  context.Background(),
+			name: "with context test",
+		},
+	}
+	var err error
+	var client *NginxClient
+	var writeLock sync.Mutex
+
 	t.Parallel()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		writeLock.Lock()
+		defer writeLock.Unlock()
+
 		switch {
 		case r.RequestURI == "/":
-			_, err := w.Write([]byte(`[4, 5, 6, 7, 8, 9]`))
+
+			_, err = w.Write([]byte(`[4, 5, 6, 7, 8, 9]`))
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
 		case r.RequestURI == "/7/":
-			_, err := w.Write([]byte(`["nginx","processes","connections","slabs","http","resolvers","ssl"]`))
+			_, err = w.Write([]byte(`["nginx","processes","connections","slabs","http","resolvers","ssl"]`))
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
 		case strings.HasPrefix(r.RequestURI, "/7/stream"):
 			t.Fatal("Stream endpoint should not be called since it does not exist.")
 		default:
-			_, err := w.Write([]byte(`{}`))
+			_, err = w.Write([]byte(`{}`))
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -647,7 +670,7 @@ func TestGetStats_NoStreamEndpoint(t *testing.T) {
 	defer ts.Close()
 
 	// Test creating a new client with a supported API version on the server
-	client, err := NewNginxClient(ts.URL, WithAPIVersion(7), WithCheckAPI())
+	client, err = NewNginxClient(ts.URL, WithAPIVersion(7), WithCheckAPI())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -655,9 +678,19 @@ func TestGetStats_NoStreamEndpoint(t *testing.T) {
 		t.Fatalf("client is nil")
 	}
 
-	stats, err := client.GetStats()
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	var stats *Stats
+	for _, test := range tests {
+		if test.ctx == nil {
+			stats, err = client.GetStats()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		} else {
+			stats, err = client.GetStatsWithContext(test.ctx)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		}
 	}
 
 	if !reflect.DeepEqual(stats.StreamServerZones, StreamServerZones{}) {
@@ -675,6 +708,20 @@ func TestGetStats_NoStreamEndpoint(t *testing.T) {
 }
 
 func TestGetStats_SSL(t *testing.T) {
+	tests := []struct {
+		ctx  context.Context
+		name string
+	}{
+		{
+			ctx:  nil,
+			name: "no context test",
+		},
+		{
+			ctx:  context.Background(),
+			name: "with context test",
+		},
+	}
+
 	t.Parallel()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
@@ -708,6 +755,11 @@ func TestGetStats_SSL(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
+		case strings.HasPrefix(r.RequestURI, "/8/stream"):
+			_, err := w.Write([]byte(`[""]`))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 		default:
 			_, err := w.Write([]byte(`{}`))
 			if err != nil {
@@ -726,30 +778,41 @@ func TestGetStats_SSL(t *testing.T) {
 		t.Fatalf("client is nil")
 	}
 
-	stats, err := client.GetStats()
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	var stats *Stats
 
-	testStats := SSL{
-		Handshakes:       79572,
-		HandshakesFailed: 21025,
-		SessionReuses:    15762,
-		NoCommonProtocol: 4,
-		NoCommonCipher:   2,
-		HandshakeTimeout: 0,
-		PeerRejectedCert: 0,
-		VerifyFailures: VerifyFailures{
-			NoCert:           0,
-			ExpiredCert:      2,
-			RevokedCert:      1,
-			HostnameMismatch: 2,
-			Other:            1,
-		},
-	}
+	for _, test := range tests {
+		if test.ctx == nil {
+			stats, err = client.GetStats()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		} else {
+			stats, err = client.GetStatsWithContext(test.ctx)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		}
 
-	if !reflect.DeepEqual(stats.SSL, testStats) {
-		t.Fatalf("SSL stats: expected %v, actual %v", testStats, stats.SSL)
+		testStats := SSL{
+			Handshakes:       79572,
+			HandshakesFailed: 21025,
+			SessionReuses:    15762,
+			NoCommonProtocol: 4,
+			NoCommonCipher:   2,
+			HandshakeTimeout: 0,
+			PeerRejectedCert: 0,
+			VerifyFailures: VerifyFailures{
+				NoCert:           0,
+				ExpiredCert:      2,
+				RevokedCert:      1,
+				HostnameMismatch: 2,
+				Other:            1,
+			},
+		}
+
+		if !reflect.DeepEqual(stats.SSL, testStats) {
+			t.Fatalf("SSL stats: expected %v, actual %v", testStats, stats.SSL)
+		}
 	}
 }
 
