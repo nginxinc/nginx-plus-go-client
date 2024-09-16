@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   lint:
-    name: Lint
+    name: Go Lint
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout Repository
