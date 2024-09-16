@@ -11,6 +11,9 @@ on:
       - main
   schedule:
     - cron: "0 5 * * *" # runs every day at 5am UTC
+  merge_group:
+    types:
+      - checks_requested
 
 defaults:
   run:
