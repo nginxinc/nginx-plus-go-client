@@ -677,7 +677,6 @@ func TestClientWithMaxAPI(t *testing.T) {
 			t.Fatalf("expected client.apiVersion to be %v, but got %v", test.expected, client.apiVersion)
 		}
 	}
-
 }
 
 func TestGetStats_NoStreamEndpoint(t *testing.T) {
