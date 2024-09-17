@@ -30,7 +30,7 @@ jobs:
       contents: read # for actions/checkout to fetch code
       security-events: write # for github/codeql-action/autobuild to send a status report
       packages: read # required to fetch internal or private CodeQL packs
-
+    if: ${{ github.event_name != 'merge_group' }}
     strategy:
       fail-fast: false
       matrix:
