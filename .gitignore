@@ -5,4 +5,7 @@
 # Visual Studio Code settings
 .vscode
 
+# Goland settings
+.idea/
+
 dist
