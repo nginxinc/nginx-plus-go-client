@@ -597,7 +597,7 @@ func WithTimeout(duration time.Duration) Option {
 	}
 }
 
-// WithMaxAPIVersion sets the flag to use the max API version.
+// WithMaxAPIVersion sets the API version to the max API version.
 func WithMaxAPIVersion() Option {
 	return func(o *NginxClient) {
 		version, err := o.GetMaxAPIVersion()
