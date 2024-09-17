@@ -13,6 +13,7 @@ import (
 // The API returns a special error code that we can use to determine if the API
 // is misconfigured or of the stream block is missing.
 func TestStatsNoStream(t *testing.T) {
+	t.Parallel()
 	c, err := client.NewNginxClient(helpers.GetAPIEndpoint())
 	if err != nil {
 		t.Fatalf("Error connecting to nginx: %v", err)
