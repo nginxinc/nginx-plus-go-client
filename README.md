@@ -1,5 +1,5 @@
 <!-- markdownlint-disable-next-line first-line-h1 -->
-[![OpenSSFScorecard](https://api.securityscorecards.dev/projects/github.com/nginxinc/nginx-plus-go-client/badge)](https://api.securityscorecards.dev/projects/github.com/nginxinc/nginx-plus-go-client)
+[![OpenSSFScorecard](https://api.securityscorecards.dev/projects/github.com/nginxinc/nginx-plus-go-client/badge)](https://scorecard.dev/viewer/?uri=github.com/nginxinc/nginx-plus-go-client)
 [![Continuous Integration](https://github.com/nginxinc/nginx-plus-go-client/workflows/Continuous%20Integration/badge.svg)](https://github.com/nginxinc/nginx-plus-go-client/actions)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Go Report Card](https://goreportcard.com/badge/github.com/nginxinc/nginx-plus-go-client)](https://goreportcard.com/report/github.com/nginxinc/nginx-plus-go-client)
