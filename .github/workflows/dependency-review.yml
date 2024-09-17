@@ -16,15 +16,13 @@ permissions:
 
 jobs:
   dependency-review:
+    name: Dependency Review
     runs-on: ubuntu-22.04
     permissions:
       contents: read # for actions/checkout
       pull-requests: write # for actions/dependency-review-action to post comments
+    if: ${{ github.event_name != 'merge_group' }}
     steps:
-      - name: Skip on Merge Group
-        run: exit 0 # Artifically flag as successful, as this is a required check for branch protection.
-        if: github.event_name == 'merge_group'
-
       - name: Checkout Repository
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
