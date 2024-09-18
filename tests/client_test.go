@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"context"
 	"net"
 	"reflect"
 	"testing"
@@ -46,13 +47,14 @@ func TestStreamClient(t *testing.T) {
 	}
 
 	// test adding a stream server
+	ctx := context.Background()
 
-	err = c.AddStreamServer(streamUpstream, streamServer)
+	err = c.AddStreamServer(ctx, streamUpstream, streamServer)
 	if err != nil {
 		t.Fatalf("Error when adding a server: %v", err)
 	}
 
-	err = c.AddStreamServer(streamUpstream, streamServer)
+	err = c.AddStreamServer(ctx, streamUpstream, streamServer)
 
 	if err == nil {
 		t.Errorf("Adding a duplicated server succeeded")
@@ -60,17 +62,17 @@ func TestStreamClient(t *testing.T) {
 
 	// test deleting a stream server
 
-	err = c.DeleteStreamServer(streamUpstream, streamServer.Server)
+	err = c.DeleteStreamServer(ctx, streamUpstream, streamServer.Server)
 	if err != nil {
 		t.Fatalf("Error when deleting a server: %v", err)
 	}
 
-	err = c.DeleteStreamServer(streamUpstream, streamServer.Server)
+	err = c.DeleteStreamServer(ctx, streamUpstream, streamServer.Server)
 	if err == nil {
 		t.Errorf("Deleting a nonexisting server succeeded")
 	}
 
-	streamServers, err := c.GetStreamServers(streamUpstream)
+	streamServers, err := c.GetStreamServers(ctx, streamUpstream)
 	if err != nil {
 		t.Errorf("Error getting stream servers: %v", err)
 	}
@@ -91,7 +93,7 @@ func TestStreamClient(t *testing.T) {
 		},
 	}
 
-	streamAdded, streamDeleted, streamUpdated, err := c.UpdateStreamServers(streamUpstream, streamServers1)
+	streamAdded, streamDeleted, streamUpdated, err := c.UpdateStreamServers(ctx, streamUpstream, streamServers1)
 	if err != nil {
 		t.Fatalf("Error when updating servers: %v", err)
 	}
@@ -107,7 +109,7 @@ func TestStreamClient(t *testing.T) {
 
 	// test getting servers
 
-	streamServers, err = c.GetStreamServers(streamUpstream)
+	streamServers, err = c.GetStreamServers(ctx, streamUpstream)
 	if err != nil {
 		t.Fatalf("Error when getting servers: %v", err)
 	}
@@ -117,7 +119,7 @@ func TestStreamClient(t *testing.T) {
 
 	// updating with the same servers
 
-	added, deleted, updated, err := c.UpdateStreamServers(streamUpstream, streamServers1)
+	added, deleted, updated, err := c.UpdateStreamServers(ctx, streamUpstream, streamServers1)
 	if err != nil {
 		t.Fatalf("Error when updating servers: %v", err)
 	}
@@ -144,7 +146,7 @@ func TestStreamClient(t *testing.T) {
 	// updating one server with only one different parameter
 	streamServers[1].SlowStart = newSlowStart
 
-	added, deleted, updated, err = c.UpdateStreamServers(streamUpstream, streamServers)
+	added, deleted, updated, err = c.UpdateStreamServers(ctx, streamUpstream, streamServers)
 	if err != nil {
 		t.Fatalf("Error when updating server with different parameters: %v", err)
 	}
@@ -158,7 +160,7 @@ func TestStreamClient(t *testing.T) {
 		t.Errorf("The number of updated servers %v != 2", len(updated))
 	}
 
-	streamServers, err = c.GetStreamServers(streamUpstream)
+	streamServers, err = c.GetStreamServers(ctx, streamUpstream)
 	if err != nil {
 		t.Fatalf("Error when getting servers: %v", err)
 	}
@@ -209,7 +211,7 @@ func TestStreamClient(t *testing.T) {
 
 	// updating with 2 new servers, 1 existing
 
-	added, deleted, updated, err = c.UpdateStreamServers(streamUpstream, streamServers2)
+	added, deleted, updated, err = c.UpdateStreamServers(ctx, streamUpstream, streamServers2)
 	if err != nil {
 		t.Fatalf("Error when updating servers: %v", err)
 	}
@@ -225,7 +227,7 @@ func TestStreamClient(t *testing.T) {
 
 	// updating with zero servers - removing
 
-	added, deleted, updated, err = c.UpdateStreamServers(streamUpstream, []client.StreamUpstreamServer{})
+	added, deleted, updated, err = c.UpdateStreamServers(ctx, streamUpstream, []client.StreamUpstreamServer{})
 	if err != nil {
 		t.Fatalf("Error when updating servers: %v", err)
 	}
@@ -241,7 +243,7 @@ func TestStreamClient(t *testing.T) {
 
 	// test getting servers again
 
-	servers, err := c.GetStreamServers(streamUpstream)
+	servers, err := c.GetStreamServers(ctx, streamUpstream)
 	if err != nil {
 		t.Fatalf("Error when getting servers: %v", err)
 	}
@@ -273,11 +275,13 @@ func TestStreamUpstreamServer(t *testing.T) {
 		Backup:      &backup,
 		Down:        &down,
 	}
-	err = c.AddStreamServer(streamUpstream, streamServer)
+	ctx := context.Background()
+
+	err = c.AddStreamServer(ctx, streamUpstream, streamServer)
 	if err != nil {
 		t.Errorf("Error adding upstream server: %v", err)
 	}
-	servers, err := c.GetStreamServers(streamUpstream)
+	servers, err := c.GetStreamServers(ctx, streamUpstream)
 	if err != nil {
 		t.Fatalf("Error getting stream servers: %v", err)
 	}
@@ -292,7 +296,7 @@ func TestStreamUpstreamServer(t *testing.T) {
 	}
 
 	// remove stream upstream servers
-	_, _, _, err = c.UpdateStreamServers(streamUpstream, []client.StreamUpstreamServer{})
+	_, _, _, err = c.UpdateStreamServers(ctx, streamUpstream, []client.StreamUpstreamServer{})
 	if err != nil {
 		t.Errorf("Couldn't remove servers: %v", err)
 	}
@@ -305,13 +309,13 @@ func TestClient(t *testing.T) {
 	}
 
 	// test checking an upstream for existence
-
-	err = c.CheckIfUpstreamExists(upstream)
+	ctx := context.Background()
+	err = c.CheckIfUpstreamExists(ctx, upstream)
 	if err != nil {
 		t.Fatalf("Error when checking an upstream for existence: %v", err)
 	}
 
-	err = c.CheckIfUpstreamExists("random")
+	err = c.CheckIfUpstreamExists(ctx, "random")
 	if err == nil {
 		t.Errorf("Nonexisting upstream exists")
 	}
@@ -322,12 +326,12 @@ func TestClient(t *testing.T) {
 
 	// test adding a http server
 
-	err = c.AddHTTPServer(upstream, server)
+	err = c.AddHTTPServer(ctx, upstream, server)
 	if err != nil {
 		t.Fatalf("Error when adding a server: %v", err)
 	}
 
-	err = c.AddHTTPServer(upstream, server)
+	err = c.AddHTTPServer(ctx, upstream, server)
 
 	if err == nil {
 		t.Errorf("Adding a duplicated server succeeded")
@@ -335,12 +339,12 @@ func TestClient(t *testing.T) {
 
 	// test deleting a http server
 
-	err = c.DeleteHTTPServer(upstream, server.Server)
+	err = c.DeleteHTTPServer(ctx, upstream, server.Server)
 	if err != nil {
 		t.Fatalf("Error when deleting a server: %v", err)
 	}
 
-	err = c.DeleteHTTPServer(upstream, server.Server)
+	err = c.DeleteHTTPServer(ctx, upstream, server.Server)
 	if err == nil {
 		t.Errorf("Deleting a nonexisting server succeeded")
 	}
@@ -358,7 +362,7 @@ func TestClient(t *testing.T) {
 		},
 	}
 
-	added, deleted, updated, err := c.UpdateHTTPServers(upstream, servers1)
+	added, deleted, updated, err := c.UpdateHTTPServers(ctx, upstream, servers1)
 	if err != nil {
 		t.Fatalf("Error when updating servers: %v", err)
 	}
@@ -374,7 +378,7 @@ func TestClient(t *testing.T) {
 
 	// test getting servers
 
-	servers, err := c.GetHTTPServers(upstream)
+	servers, err := c.GetHTTPServers(ctx, upstream)
 	if err != nil {
 		t.Fatalf("Error when getting servers: %v", err)
 	}
@@ -386,7 +390,7 @@ func TestClient(t *testing.T) {
 
 	// updating with the same servers
 
-	added, deleted, updated, err = c.UpdateHTTPServers(upstream, servers1)
+	added, deleted, updated, err = c.UpdateHTTPServers(ctx, upstream, servers1)
 	if err != nil {
 		t.Fatalf("Error when updating servers: %v", err)
 	}
@@ -413,7 +417,7 @@ func TestClient(t *testing.T) {
 	// updating one server with only one different parameter
 	servers[1].SlowStart = newSlowStart
 
-	added, deleted, updated, err = c.UpdateHTTPServers(upstream, servers)
+	added, deleted, updated, err = c.UpdateHTTPServers(ctx, upstream, servers)
 	if err != nil {
 		t.Fatalf("Error when updating server with different parameters: %v", err)
 	}
@@ -427,7 +431,7 @@ func TestClient(t *testing.T) {
 		t.Errorf("The number of updated servers %v != 2", len(updated))
 	}
 
-	servers, err = c.GetHTTPServers(upstream)
+	servers, err = c.GetHTTPServers(ctx, upstream)
 	if err != nil {
 		t.Fatalf("Error when getting servers: %v", err)
 	}
@@ -478,7 +482,7 @@ func TestClient(t *testing.T) {
 
 	// updating with 2 new servers, 1 existing
 
-	added, deleted, updated, err = c.UpdateHTTPServers(upstream, servers2)
+	added, deleted, updated, err = c.UpdateHTTPServers(ctx, upstream, servers2)
 	if err != nil {
 		t.Fatalf("Error when updating servers: %v", err)
 	}
@@ -494,7 +498,7 @@ func TestClient(t *testing.T) {
 
 	// updating with zero servers - removing
 
-	added, deleted, updated, err = c.UpdateHTTPServers(upstream, []client.UpstreamServer{})
+	added, deleted, updated, err = c.UpdateHTTPServers(ctx, upstream, []client.UpstreamServer{})
 	if err != nil {
 		t.Fatalf("Error when updating servers: %v", err)
 	}
@@ -510,7 +514,7 @@ func TestClient(t *testing.T) {
 
 	// test getting servers again
 
-	servers, err = c.GetHTTPServers(upstream)
+	servers, err = c.GetHTTPServers(ctx, upstream)
 	if err != nil {
 		t.Fatalf("Error when getting servers: %v", err)
 	}
@@ -543,11 +547,12 @@ func TestUpstreamServer(t *testing.T) {
 		Backup:      &backup,
 		Down:        &down,
 	}
-	err = c.AddHTTPServer(upstream, server)
+	ctx := context.Background()
+	err = c.AddHTTPServer(ctx, upstream, server)
 	if err != nil {
 		t.Errorf("Error adding upstream server: %v", err)
 	}
-	servers, err := c.GetHTTPServers(upstream)
+	servers, err := c.GetHTTPServers(ctx, upstream)
 	if err != nil {
 		t.Fatalf("Error getting HTTPServers: %v", err)
 	}
@@ -562,7 +567,7 @@ func TestUpstreamServer(t *testing.T) {
 	}
 
 	// remove upstream servers
-	_, _, _, err = c.UpdateHTTPServers(upstream, []client.UpstreamServer{})
+	_, _, _, err = c.UpdateHTTPServers(ctx, upstream, []client.UpstreamServer{})
 	if err != nil {
 		t.Errorf("Couldn't remove servers: %v", err)
 	}
@@ -577,12 +582,13 @@ func TestStats(t *testing.T) {
 	server := client.UpstreamServer{
 		Server: "127.0.0.1:8080",
 	}
-	err = c.AddHTTPServer(upstream, server)
+	ctx := context.Background()
+	err = c.AddHTTPServer(ctx, upstream, server)
 	if err != nil {
 		t.Errorf("Error adding upstream server: %v", err)
 	}
 
-	stats, err := c.GetStats()
+	stats, err := c.GetStats(ctx)
 	if err != nil {
 		t.Errorf("Error getting stats: %v", err)
 	}
@@ -703,7 +709,7 @@ func TestStats(t *testing.T) {
 	}
 
 	// cleanup upstream servers
-	_, _, _, err = c.UpdateHTTPServers(upstream, []client.UpstreamServer{})
+	_, _, _, err = c.UpdateHTTPServers(ctx, upstream, []client.UpstreamServer{})
 	if err != nil {
 		t.Errorf("Couldn't remove servers: %v", err)
 	}
@@ -733,11 +739,12 @@ func TestUpstreamServerDefaultParameters(t *testing.T) {
 		Weight:      &defaultWeight,
 		Service:     "",
 	}
-	err = c.AddHTTPServer(upstream, server)
+	ctx := context.Background()
+	err = c.AddHTTPServer(ctx, upstream, server)
 	if err != nil {
 		t.Errorf("Error adding upstream server: %v", err)
 	}
-	servers, err := c.GetHTTPServers(upstream)
+	servers, err := c.GetHTTPServers(ctx, upstream)
 	if err != nil {
 		t.Fatalf("Error getting HTTPServers: %v", err)
 	}
@@ -752,7 +759,7 @@ func TestUpstreamServerDefaultParameters(t *testing.T) {
 	}
 
 	// remove upstream servers
-	_, _, _, err = c.UpdateHTTPServers(upstream, []client.UpstreamServer{})
+	_, _, _, err = c.UpdateHTTPServers(ctx, upstream, []client.UpstreamServer{})
 	if err != nil {
 		t.Errorf("Couldn't remove servers: %v", err)
 	}
@@ -767,7 +774,8 @@ func TestStreamStats(t *testing.T) {
 	server := client.StreamUpstreamServer{
 		Server: "127.0.0.1:8080",
 	}
-	err = c.AddStreamServer(streamUpstream, server)
+	ctx := context.Background()
+	err = c.AddStreamServer(ctx, streamUpstream, server)
 	if err != nil {
 		t.Errorf("Error adding stream upstream server: %v", err)
 	}
@@ -781,7 +789,7 @@ func TestStreamStats(t *testing.T) {
 	// wait for health checks
 	time.Sleep(50 * time.Millisecond)
 
-	stats, err := c.GetStats()
+	stats, err := c.GetStats(ctx)
 	if err != nil {
 		t.Errorf("Error getting stats: %v", err)
 	}
@@ -829,7 +837,7 @@ func TestStreamStats(t *testing.T) {
 	}
 
 	// cleanup stream upstream servers
-	_, _, _, err = c.UpdateStreamServers(streamUpstream, []client.StreamUpstreamServer{})
+	_, _, _, err = c.UpdateStreamServers(ctx, streamUpstream, []client.StreamUpstreamServer{})
 	if err != nil {
 		t.Errorf("Couldn't remove stream servers: %v", err)
 	}
@@ -857,11 +865,12 @@ func TestStreamUpstreamServerDefaultParameters(t *testing.T) {
 		Weight:      &defaultWeight,
 		Service:     "",
 	}
-	err = c.AddStreamServer(streamUpstream, streamServer)
+	ctx := context.Background()
+	err = c.AddStreamServer(ctx, streamUpstream, streamServer)
 	if err != nil {
 		t.Errorf("Error adding upstream server: %v", err)
 	}
-	streamServers, err := c.GetStreamServers(streamUpstream)
+	streamServers, err := c.GetStreamServers(ctx, streamUpstream)
 	if err != nil {
 		t.Fatalf("Error getting stream servers: %v", err)
 	}
@@ -876,7 +885,7 @@ func TestStreamUpstreamServerDefaultParameters(t *testing.T) {
 	}
 
 	// cleanup stream upstream servers
-	_, _, _, err = c.UpdateStreamServers(streamUpstream, []client.StreamUpstreamServer{})
+	_, _, _, err = c.UpdateStreamServers(ctx, streamUpstream, []client.StreamUpstreamServer{})
 	if err != nil {
 		t.Errorf("Couldn't remove stream servers: %v", err)
 	}
@@ -889,13 +898,14 @@ func TestKeyValue(t *testing.T) {
 		t.Fatalf("Error connecting to nginx: %v", err)
 	}
 
-	err = c.AddKeyValPair(zoneName, "key1", "val1")
+	ctx := context.Background()
+	err = c.AddKeyValPair(ctx, zoneName, "key1", "val1")
 	if err != nil {
 		t.Errorf("Couldn't set keyvals: %v", err)
 	}
 
 	var keyValPairs client.KeyValPairs
-	keyValPairs, err = c.GetKeyValPairs(zoneName)
+	keyValPairs, err = c.GetKeyValPairs(ctx, zoneName)
 	if err != nil {
 		t.Errorf("Couldn't get keyvals for zone: %v, err: %v", zoneName, err)
 	}
@@ -906,7 +916,7 @@ func TestKeyValue(t *testing.T) {
 		t.Errorf("maps are not equal. expected: %+v, got: %+v", expectedKeyValPairs, keyValPairs)
 	}
 
-	keyValuPairsByZone, err := c.GetAllKeyValPairs()
+	keyValuPairsByZone, err := c.GetAllKeyValPairs(ctx)
 	if err != nil {
 		t.Errorf("Couldn't get keyvals, %v", err)
 	}
@@ -919,12 +929,12 @@ func TestKeyValue(t *testing.T) {
 
 	// modify keyval
 	expectedKeyValPairs["key1"] = "valModified1"
-	err = c.ModifyKeyValPair(zoneName, "key1", "valModified1")
+	err = c.ModifyKeyValPair(ctx, zoneName, "key1", "valModified1")
 	if err != nil {
 		t.Errorf("couldn't set keyval: %v", err)
 	}
 
-	keyValPairs, err = c.GetKeyValPairs(zoneName)
+	keyValPairs, err = c.GetKeyValPairs(ctx, zoneName)
 	if err != nil {
 		t.Errorf("couldn't get keyval: %v", err)
 	}
@@ -933,17 +943,17 @@ func TestKeyValue(t *testing.T) {
 	}
 
 	// error expected
-	err = c.AddKeyValPair(zoneName, "key1", "valModified1")
+	err = c.AddKeyValPair(ctx, zoneName, "key1", "valModified1")
 	if err == nil {
 		t.Errorf("adding same key/val should result in error")
 	}
 
-	err = c.AddKeyValPair(zoneName, "key2", "val2")
+	err = c.AddKeyValPair(ctx, zoneName, "key2", "val2")
 	if err != nil {
 		t.Errorf("error adding another key/val pair: %v", err)
 	}
 
-	err = c.DeleteKeyValuePair(zoneName, "key1")
+	err = c.DeleteKeyValuePair(ctx, zoneName, "key1")
 	if err != nil {
 		t.Errorf("error deleting key")
 	}
@@ -951,7 +961,7 @@ func TestKeyValue(t *testing.T) {
 	expectedKeyValPairs2 := client.KeyValPairs{
 		"key2": "val2",
 	}
-	keyValPairs, err = c.GetKeyValPairs(zoneName)
+	keyValPairs, err = c.GetKeyValPairs(ctx, zoneName)
 	if err != nil {
 		t.Errorf("couldn't get keyval: %v", err)
 	}
@@ -959,12 +969,12 @@ func TestKeyValue(t *testing.T) {
 		t.Errorf("didn't delete key1 %+v", keyValPairs)
 	}
 
-	err = c.DeleteKeyValPairs(zoneName)
+	err = c.DeleteKeyValPairs(ctx, zoneName)
 	if err != nil {
 		t.Errorf("couldn't delete all: %v", err)
 	}
 
-	keyValPairs, err = c.GetKeyValPairs(zoneName)
+	keyValPairs, err = c.GetKeyValPairs(ctx, zoneName)
 	if err != nil {
 		t.Errorf("couldn't get keyval: %v", err)
 	}
@@ -973,7 +983,7 @@ func TestKeyValue(t *testing.T) {
 	}
 
 	// error expected
-	err = c.ModifyKeyValPair(zoneName, "key1", "val1")
+	err = c.ModifyKeyValPair(ctx, zoneName, "key1", "val1")
 	if err == nil {
 		t.Errorf("modifying nonexistent key/val should result in error")
 	}
@@ -985,13 +995,13 @@ func TestKeyValueStream(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error connecting to nginx: %v", err)
 	}
-
-	err = c.AddStreamKeyValPair(zoneName, "key1", "val1")
+	ctx := context.Background()
+	err = c.AddStreamKeyValPair(ctx, zoneName, "key1", "val1")
 	if err != nil {
 		t.Errorf("Couldn't set keyvals: %v", err)
 	}
 
-	keyValPairs, err := c.GetStreamKeyValPairs(zoneName)
+	keyValPairs, err := c.GetStreamKeyValPairs(ctx, zoneName)
 	if err != nil {
 		t.Errorf("Couldn't get keyvals for zone: %v, err: %v", zoneName, err)
 	}
@@ -1002,7 +1012,7 @@ func TestKeyValueStream(t *testing.T) {
 		t.Errorf("maps are not equal. expected: %+v, got: %+v", expectedKeyValPairs, keyValPairs)
 	}
 
-	keyValPairsByZone, err := c.GetAllStreamKeyValPairs()
+	keyValPairsByZone, err := c.GetAllStreamKeyValPairs(ctx)
 	if err != nil {
 		t.Errorf("Couldn't get keyvals, %v", err)
 	}
@@ -1016,12 +1026,12 @@ func TestKeyValueStream(t *testing.T) {
 
 	// modify keyval
 	expectedKeyValPairs["key1"] = "valModified1"
-	err = c.ModifyStreamKeyValPair(zoneName, "key1", "valModified1")
+	err = c.ModifyStreamKeyValPair(ctx, zoneName, "key1", "valModified1")
 	if err != nil {
 		t.Errorf("couldn't set keyval: %v", err)
 	}
 
-	keyValPairs, err = c.GetStreamKeyValPairs(zoneName)
+	keyValPairs, err = c.GetStreamKeyValPairs(ctx, zoneName)
 	if err != nil {
 		t.Errorf("couldn't get keyval: %v", err)
 	}
@@ -1030,22 +1040,22 @@ func TestKeyValueStream(t *testing.T) {
 	}
 
 	// error expected
-	err = c.AddStreamKeyValPair(zoneName, "key1", "valModified1")
+	err = c.AddStreamKeyValPair(ctx, zoneName, "key1", "valModified1")
 	if err == nil {
 		t.Errorf("adding same key/val should result in error")
 	}
 
-	err = c.AddStreamKeyValPair(zoneName, "key2", "val2")
+	err = c.AddStreamKeyValPair(ctx, zoneName, "key2", "val2")
 	if err != nil {
 		t.Errorf("error adding another key/val pair: %v", err)
 	}
 
-	err = c.DeleteStreamKeyValuePair(zoneName, "key1")
+	err = c.DeleteStreamKeyValuePair(ctx, zoneName, "key1")
 	if err != nil {
 		t.Errorf("error deleting key")
 	}
 
-	keyValPairs, err = c.GetStreamKeyValPairs(zoneName)
+	keyValPairs, err = c.GetStreamKeyValPairs(ctx, zoneName)
 	if err != nil {
 		t.Errorf("couldn't get keyval: %v", err)
 	}
@@ -1056,12 +1066,12 @@ func TestKeyValueStream(t *testing.T) {
 		t.Errorf("didn't delete key1 %+v", keyValPairs)
 	}
 
-	err = c.DeleteStreamKeyValPairs(zoneName)
+	err = c.DeleteStreamKeyValPairs(ctx, zoneName)
 	if err != nil {
 		t.Errorf("couldn't delete all: %v", err)
 	}
 
-	keyValPairs, err = c.GetStreamKeyValPairs(zoneName)
+	keyValPairs, err = c.GetStreamKeyValPairs(ctx, zoneName)
 	if err != nil {
 		t.Errorf("couldn't get keyval: %v", err)
 	}
@@ -1070,7 +1080,7 @@ func TestKeyValueStream(t *testing.T) {
 	}
 
 	// error expected
-	err = c.ModifyStreamKeyValPair(zoneName, "key1", "valModified")
+	err = c.ModifyStreamKeyValPair(ctx, zoneName, "key1", "valModified")
 	if err == nil {
 		t.Errorf("modifying nonexistent key/val should result in error")
 	}
@@ -1086,8 +1096,8 @@ func TestStreamZoneSync(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error connecting to nginx: %v", err)
 	}
-
-	err = c1.AddStreamKeyValPair(streamZoneSync, "key1", "val1")
+	ctx := context.Background()
+	err = c1.AddStreamKeyValPair(ctx, streamZoneSync, "key1", "val1")
 	if err != nil {
 		t.Errorf("Couldn't set keyvals: %v", err)
 	}
@@ -1095,7 +1105,7 @@ func TestStreamZoneSync(t *testing.T) {
 	// wait for nodes to sync information of synced zones
 	time.Sleep(5 * time.Second)
 
-	statsC1, err := c1.GetStats()
+	statsC1, err := c1.GetStats(ctx)
 	if err != nil {
 		t.Errorf("Error getting stats: %v", err)
 	}
@@ -1135,7 +1145,7 @@ func TestStreamZoneSync(t *testing.T) {
 		t.Errorf("Sync zone %v missing in stats", streamZoneSync)
 	}
 
-	statsC2, err := c2.GetStats()
+	statsC2, err := c2.GetStats(ctx)
 	if err != nil {
 		t.Errorf("Error getting stats: %v", err)
 	}
@@ -1225,7 +1235,8 @@ func TestUpstreamServerWithDrain(t *testing.T) {
 	}
 
 	// Get existing upstream servers
-	servers, err := c.GetHTTPServers("test-drain")
+	ctx := context.Background()
+	servers, err := c.GetHTTPServers(ctx, "test-drain")
 	if err != nil {
 		t.Fatalf("Error getting HTTPServers: %v", err)
 	}
