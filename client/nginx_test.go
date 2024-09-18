@@ -625,7 +625,6 @@ func TestClientWithHTTPClient(t *testing.T) {
 
 func TestClientWithMaxAPI(t *testing.T) {
 	t.Parallel()
-
 	tests := []struct {
 		name        string
 		apiVersions string
@@ -655,6 +654,7 @@ func TestClientWithMaxAPI(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			// Test creating a new client with max API version
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				switch {
