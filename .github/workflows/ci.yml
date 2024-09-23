@@ -53,6 +53,7 @@ jobs:
     runs-on: ubuntu-22.04
     permissions:
       contents: write
+      issues: write
     if: ${{ github.event.repository.fork == false }}
     steps:
       - name: Checkout Repository
@@ -107,7 +108,7 @@ jobs:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@286f3b13b1b49da4ac219696163fb8c1c93e1200 # v6.0.0
         with:
-          version: v2.3.1 # renovate: datasource=github-tags depName=goreleaser/goreleaser
+          version: v2.3.2 # renovate: datasource=github-tags depName=goreleaser/goreleaser
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
