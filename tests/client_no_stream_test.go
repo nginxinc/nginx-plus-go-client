@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/nginxinc/nginx-plus-go-client/client"
-	"github.com/nginxinc/nginx-plus-go-client/tests/helpers"
+	"github.com/nginxinc/nginx-plus-go-client/v2/client"
+	"github.com/nginxinc/nginx-plus-go-client/v2/tests/helpers"
 )
 
 // TestStatsNoStream tests the peculiar behavior of getting Stream-related
