@@ -591,7 +591,9 @@ func WithCheckAPI() Option {
 // WithMaxAPIVersion sets the API version to the max API version.
 func WithMaxAPIVersion() Option {
 	return func(o *NginxClient) {
-		version, err := o.GetMaxAPIVersion()
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		version, err := o.GetMaxAPIVersion(ctx)
 		if err != nil {
 			return
 		}
