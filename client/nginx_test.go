@@ -14,6 +14,7 @@ func TestDetermineUpdates(t *testing.T) {
 	t.Parallel()
 	maxConns := 1
 	tests := []struct {
+		name             string
 		updated          []UpstreamServer
 		nginx            []UpstreamServer
 		expectedToAdd    []UpstreamServer
@@ -57,6 +58,7 @@ func TestDetermineUpdates(t *testing.T) {
 					Server: "10.0.0.2:80",
 				},
 			},
+			name: "replace all",
 		},
 		{
 			updated: []UpstreamServer{
@@ -95,6 +97,7 @@ func TestDetermineUpdates(t *testing.T) {
 					Server: "10.0.0.1:80",
 				},
 			},
+			name: "add and delete",
 		},
 		{
 			updated: []UpstreamServer{
@@ -119,6 +122,7 @@ func TestDetermineUpdates(t *testing.T) {
 					Server: "10.0.0.3:80",
 				},
 			},
+			name: "same",
 		},
 		{
 			// empty values
@@ -153,14 +157,18 @@ func TestDetermineUpdates(t *testing.T) {
 					MaxConns: &maxConns,
 				},
 			},
+			name: "update field and delete",
 		},
 	}
 
 	for _, test := range tests {
-		toAdd, toDelete, toUpdate := determineUpdates(test.updated, test.nginx)
-		if !reflect.DeepEqual(toAdd, test.expectedToAdd) || !reflect.DeepEqual(toDelete, test.expectedToDelete) || !reflect.DeepEqual(toUpdate, test.expectedToUpdate) {
-			t.Errorf("determineUpdates(%v, %v) = (%v, %v, %v)", test.updated, test.nginx, toAdd, toDelete, toUpdate)
-		}
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			toAdd, toDelete, toUpdate := determineUpdates(test.updated, test.nginx)
+			if !reflect.DeepEqual(toAdd, test.expectedToAdd) || !reflect.DeepEqual(toDelete, test.expectedToDelete) || !reflect.DeepEqual(toUpdate, test.expectedToUpdate) {
+				t.Errorf("determineUpdates(%v, %v) = (%v, %v, %v)", test.updated, test.nginx, toAdd, toDelete, toUpdate)
+			}
+		})
 	}
 }
 
@@ -168,6 +176,7 @@ func TestStreamDetermineUpdates(t *testing.T) {
 	t.Parallel()
 	maxConns := 1
 	tests := []struct {
+		name             string
 		updated          []StreamUpstreamServer
 		nginx            []StreamUpstreamServer
 		expectedToAdd    []StreamUpstreamServer
@@ -211,6 +220,7 @@ func TestStreamDetermineUpdates(t *testing.T) {
 					Server: "10.0.0.2:80",
 				},
 			},
+			name: "replace all",
 		},
 		{
 			updated: []StreamUpstreamServer{
@@ -249,6 +259,7 @@ func TestStreamDetermineUpdates(t *testing.T) {
 					Server: "10.0.0.1:80",
 				},
 			},
+			name: "add and delete",
 		},
 		{
 			updated: []StreamUpstreamServer{
@@ -276,6 +287,7 @@ func TestStreamDetermineUpdates(t *testing.T) {
 					Server: "10.0.0.3:80",
 				},
 			},
+			name: "same",
 		},
 		{
 			// empty values
@@ -310,14 +322,18 @@ func TestStreamDetermineUpdates(t *testing.T) {
 					MaxConns: &maxConns,
 				},
 			},
+			name: "update field and delete",
 		},
 	}
 
 	for _, test := range tests {
-		toAdd, toDelete, toUpdate := determineStreamUpdates(test.updated, test.nginx)
-		if !reflect.DeepEqual(toAdd, test.expectedToAdd) || !reflect.DeepEqual(toDelete, test.expectedToDelete) || !reflect.DeepEqual(toUpdate, test.expectedToUpdate) {
-			t.Errorf("determiteUpdates(%v, %v) = (%v, %v, %v)", test.updated, test.nginx, toAdd, toDelete, toUpdate)
-		}
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			toAdd, toDelete, toUpdate := determineStreamUpdates(test.updated, test.nginx)
+			if !reflect.DeepEqual(toAdd, test.expectedToAdd) || !reflect.DeepEqual(toDelete, test.expectedToDelete) || !reflect.DeepEqual(toUpdate, test.expectedToUpdate) {
+				t.Errorf("determiteUpdates(%v, %v) = (%v, %v, %v)", test.updated, test.nginx, toAdd, toDelete, toUpdate)
+			}
+		})
 	}
 }
 
@@ -367,16 +383,20 @@ func TestAddPortToServer(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result := addPortToServer(test.address)
-		if result != test.expected {
-			t.Errorf("addPortToServer(%v) returned %v but expected %v for %v", test.address, result, test.expected, test.msg)
-		}
+		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
+			result := addPortToServer(test.address)
+			if result != test.expected {
+				t.Errorf("addPortToServer(%v) returned %v but expected %v for %v", test.address, result, test.expected, test.msg)
+			}
+		})
 	}
 }
 
 func TestHaveSameParameters(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
+		msg       string
 		server    UpstreamServer
 		serverNGX UpstreamServer
 		expected  bool
@@ -385,11 +405,13 @@ func TestHaveSameParameters(t *testing.T) {
 			server:    UpstreamServer{},
 			serverNGX: UpstreamServer{},
 			expected:  true,
+			msg:       "empty",
 		},
 		{
 			server:    UpstreamServer{ID: 2},
 			serverNGX: UpstreamServer{ID: 3},
 			expected:  true,
+			msg:       "different ID",
 		},
 		{
 			server: UpstreamServer{},
@@ -403,6 +425,7 @@ func TestHaveSameParameters(t *testing.T) {
 				Down:        &defaultDown,
 			},
 			expected: true,
+			msg:      "default values",
 		},
 		{
 			server: UpstreamServer{
@@ -428,35 +451,43 @@ func TestHaveSameParameters(t *testing.T) {
 				Down:        &defaultDown,
 			},
 			expected: true,
+			msg:      "same values",
 		},
 		{
 			server:    UpstreamServer{SlowStart: "10s"},
 			serverNGX: UpstreamServer{},
 			expected:  false,
+			msg:       "different SlowStart",
 		},
 		{
 			server:    UpstreamServer{},
 			serverNGX: UpstreamServer{SlowStart: "10s"},
 			expected:  false,
+			msg:       "different SlowStart 2",
 		},
 		{
 			server:    UpstreamServer{SlowStart: "20s"},
 			serverNGX: UpstreamServer{SlowStart: "10s"},
 			expected:  false,
+			msg:       "different SlowStart 3",
 		},
 	}
 
 	for _, test := range tests {
-		result := haveSameParameters(test.server, test.serverNGX)
-		if result != test.expected {
-			t.Errorf("haveSameParameters(%v, %v) returned %v but expected %v", test.server, test.serverNGX, result, test.expected)
-		}
+		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
+			result := haveSameParameters(test.server, test.serverNGX)
+			if result != test.expected {
+				t.Errorf("haveSameParameters(%v, %v) returned %v but expected %v", test.server, test.serverNGX, result, test.expected)
+			}
+		})
 	}
 }
 
 func TestHaveSameParametersForStream(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
+		msg       string
 		server    StreamUpstreamServer
 		serverNGX StreamUpstreamServer
 		expected  bool
@@ -465,11 +496,13 @@ func TestHaveSameParametersForStream(t *testing.T) {
 			server:    StreamUpstreamServer{},
 			serverNGX: StreamUpstreamServer{},
 			expected:  true,
+			msg:       "empty",
 		},
 		{
 			server:    StreamUpstreamServer{ID: 2},
 			serverNGX: StreamUpstreamServer{ID: 3},
 			expected:  true,
+			msg:       "different ID",
 		},
 		{
 			server: StreamUpstreamServer{},
@@ -483,6 +516,7 @@ func TestHaveSameParametersForStream(t *testing.T) {
 				Down:        &defaultDown,
 			},
 			expected: true,
+			msg:      "default values",
 		},
 		{
 			server: StreamUpstreamServer{
@@ -508,24 +542,30 @@ func TestHaveSameParametersForStream(t *testing.T) {
 				Down:        &defaultDown,
 			},
 			expected: true,
+			msg:      "same values",
 		},
 		{
 			server:    StreamUpstreamServer{},
 			serverNGX: StreamUpstreamServer{SlowStart: "10s"},
 			expected:  false,
+			msg:       "different SlowStart",
 		},
 		{
 			server:    StreamUpstreamServer{SlowStart: "20s"},
 			serverNGX: StreamUpstreamServer{SlowStart: "10s"},
 			expected:  false,
+			msg:       "different SlowStart 2",
 		},
 	}
 
 	for _, test := range tests {
-		result := haveSameParametersForStream(test.server, test.serverNGX)
-		if result != test.expected {
-			t.Errorf("haveSameParametersForStream(%v, %v) returned %v but expected %v", test.server, test.serverNGX, result, test.expected)
-		}
+		t.Run(test.msg, func(t *testing.T) {
+			t.Parallel()
+			result := haveSameParametersForStream(test.server, test.serverNGX)
+			if result != test.expected {
+				t.Errorf("haveSameParametersForStream(%v, %v) returned %v but expected %v", test.server, test.serverNGX, result, test.expected)
+			}
+		})
 	}
 }
 
@@ -665,9 +705,9 @@ func TestClientWithMaxAPI(t *testing.T) {
 }
 
 func TestGetStats_NoStreamEndpoint(t *testing.T) {
+	t.Parallel()
 	var writeLock sync.Mutex
 
-	t.Parallel()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		writeLock.Lock()
 		defer writeLock.Unlock()

@@ -33,6 +33,7 @@ var (
 	defaultWeight      = 1
 )
 
+//nolint:paralleltest
 func TestStreamClient(t *testing.T) {
 	c, err := client.NewNginxClient(
 		helpers.GetAPIEndpoint(),
@@ -254,6 +255,7 @@ func TestStreamClient(t *testing.T) {
 }
 
 func TestStreamUpstreamServer(t *testing.T) {
+	t.Parallel()
 	c, err := client.NewNginxClient(helpers.GetAPIEndpoint())
 	if err != nil {
 		t.Fatalf("Error connecting to nginx: %v", err)
@@ -302,6 +304,7 @@ func TestStreamUpstreamServer(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest
 func TestClient(t *testing.T) {
 	c, err := client.NewNginxClient(helpers.GetAPIEndpoint())
 	if err != nil {
@@ -524,6 +527,7 @@ func TestClient(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest
 func TestUpstreamServer(t *testing.T) {
 	c, err := client.NewNginxClient(helpers.GetAPIEndpoint())
 	if err != nil {
@@ -573,6 +577,7 @@ func TestUpstreamServer(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest
 func TestStats(t *testing.T) {
 	c, err := client.NewNginxClient(helpers.GetAPIEndpoint())
 	if err != nil {
@@ -715,6 +720,7 @@ func TestStats(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest
 func TestUpstreamServerDefaultParameters(t *testing.T) {
 	c, err := client.NewNginxClient(helpers.GetAPIEndpoint())
 	if err != nil {
@@ -765,6 +771,7 @@ func TestUpstreamServerDefaultParameters(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest
 func TestStreamStats(t *testing.T) {
 	c, err := client.NewNginxClient(helpers.GetAPIEndpoint())
 	if err != nil {
@@ -843,6 +850,7 @@ func TestStreamStats(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest
 func TestStreamUpstreamServerDefaultParameters(t *testing.T) {
 	c, err := client.NewNginxClient(helpers.GetAPIEndpoint())
 	if err != nil {
@@ -891,6 +899,7 @@ func TestStreamUpstreamServerDefaultParameters(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest
 func TestKeyValue(t *testing.T) {
 	zoneName := "zone_one"
 	c, err := client.NewNginxClient(helpers.GetAPIEndpoint())
@@ -989,6 +998,7 @@ func TestKeyValue(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest
 func TestKeyValueStream(t *testing.T) {
 	zoneName := "zone_one_stream"
 	c, err := client.NewNginxClient(helpers.GetAPIEndpoint())
@@ -1087,6 +1097,7 @@ func TestKeyValueStream(t *testing.T) {
 }
 
 func TestStreamZoneSync(t *testing.T) {
+	t.Parallel()
 	c1, err := client.NewNginxClient(helpers.GetAPIEndpoint())
 	if err != nil {
 		t.Fatalf("Error connecting to nginx: %v", err)
@@ -1214,6 +1225,7 @@ func compareStreamUpstreamServers(x []client.StreamUpstreamServer, y []client.St
 }
 
 func TestUpstreamServerWithDrain(t *testing.T) {
+	t.Parallel()
 	c, err := client.NewNginxClient(helpers.GetAPIEndpoint())
 	if err != nil {
 		t.Fatalf("Error connecting to nginx: %v", err)
