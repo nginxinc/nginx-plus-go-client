@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"context"
 	"testing"
 
 	"github.com/nginxinc/nginx-plus-go-client/client"
@@ -16,8 +17,8 @@ func TestStatsNoStream(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error connecting to nginx: %v", err)
 	}
-
-	stats, err := c.GetStats()
+	ctx := context.Background()
+	stats, err := c.GetStats(ctx)
 	if err != nil {
 		t.Errorf("Error getting stats: %v", err)
 	}
