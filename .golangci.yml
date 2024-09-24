@@ -34,6 +34,7 @@ linters:
     - asasalint
     - asciicheck
     - bidichk
+    - containedctx
     - contextcheck
     - copyloopvar
     - dupword
