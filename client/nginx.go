@@ -588,6 +588,19 @@ func WithCheckAPI() Option {
 	}
 }
 
+// WithMaxAPIVersion sets the API version to the max API version.
+func WithMaxAPIVersion() Option {
+	return func(o *NginxClient) {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		version, err := o.GetMaxAPIVersion(ctx)
+		if err != nil {
+			return
+		}
+		o.apiVersion = version
+	}
+}
+
 // NewNginxClient creates a new NginxClient.
 func NewNginxClient(apiEndpoint string, opts ...Option) (*NginxClient, error) {
 	c := &NginxClient{

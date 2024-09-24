@@ -601,6 +601,69 @@ func TestClientWithHTTPClient(t *testing.T) {
 	}
 }
 
+func TestClientWithMaxAPI(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		apiVersions string
+		expected    int
+	}{
+		{
+			name:        "Test 1: API versions contains invalid version",
+			apiVersions: `[4, 5, 6, 7, 8, 9, 25]`,
+			expected:    APIVersion,
+		},
+		{
+			name:        "Test 2: No API versions, default API Version is used",
+			apiVersions: ``,
+			expected:    APIVersion,
+		},
+		{
+			name:        "Test 3: API version lower than default",
+			apiVersions: `[4, 5, 6, 7]`,
+			expected:    7,
+		},
+		{
+			name:        "Test 4: No API versions, default API version is used",
+			apiVersions: `[""]`,
+			expected:    APIVersion,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			// Test creating a new client with max API version
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch {
+				case r.RequestURI == "/":
+					_, err := w.Write([]byte(tt.apiVersions))
+					if err != nil {
+						t.Fatalf("unexpected error: %v", err)
+					}
+				default:
+					_, err := w.Write([]byte(`{}`))
+					if err != nil {
+						t.Fatalf("unexpected error: %v", err)
+					}
+				}
+			}))
+			defer ts.Close()
+
+			client, err := NewNginxClient(ts.URL, WithMaxAPIVersion())
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if client == nil {
+				t.Fatalf("client is nil")
+			}
+			if client.apiVersion != tt.expected {
+				t.Fatalf("expected client.apiVersion to be %v, but got %v", tt.expected, client.apiVersion)
+			}
+		})
+	}
+}
+
 func TestGetStats_NoStreamEndpoint(t *testing.T) {
 	var writeLock sync.Mutex
 
