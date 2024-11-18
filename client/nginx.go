@@ -1570,9 +1570,14 @@ func (client *NginxClient) GetNginxInfo(ctx context.Context) (*NginxInfo, error)
 // GetNginxLicense returns Nginx License data with a context.
 func (client *NginxClient) GetNginxLicense(ctx context.Context) (*NginxLicense, error) {
 	var info NginxLicense
+
+	if client.apiVersion < 9 {
+		return nil, fmt.Errorf("unsupported API version %v: %w by the client for the licensing endpoint", client.apiVersion, ErrNotSupported)
+	}
+
 	err := client.get(ctx, "license", &info)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get info: %w", err)
+		return nil, fmt.Errorf("failed to get license: %w", err)
 	}
 	return &info, nil
 }
