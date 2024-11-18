@@ -193,6 +193,20 @@ type NginxInfo struct {
 	ParentProcessID uint64 `json:"ppid"`
 }
 
+// LicenseReporting contains information about license status for NGINX Plus.
+type LicenseReporting struct {
+	Healthy bool
+	Fails   uint64
+	Grace   uint64
+}
+
+// NginxLicense contains licensing information about NGINX Plus.
+type NginxLicense struct {
+	ActiveTill uint64 `json:"active_till"`
+	Eval       bool
+	Reporting  LicenseReporting
+}
+
 // Caches is a map of cache stats by cache zone.
 type Caches = map[string]HTTPCache
 
@@ -1547,6 +1561,16 @@ func (client *NginxClient) GetAvailableStreamEndpoints(ctx context.Context) ([]s
 func (client *NginxClient) GetNginxInfo(ctx context.Context) (*NginxInfo, error) {
 	var info NginxInfo
 	err := client.get(ctx, "nginx", &info)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get info: %w", err)
+	}
+	return &info, nil
+}
+
+// GetNginxLicense returns Nginx License data with a context.
+func (client *NginxClient) GetNginxLicense(ctx context.Context) (*NginxLicense, error) {
+	var info NginxLicense
+	err := client.get(ctx, "license", &info)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get info: %w", err)
 	}
