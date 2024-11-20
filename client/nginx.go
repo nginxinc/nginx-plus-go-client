@@ -9,7 +9,9 @@ import (
 	"io"
 	"net/http"
 	"reflect"
+	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -1569,17 +1571,26 @@ func (client *NginxClient) GetNginxInfo(ctx context.Context) (*NginxInfo, error)
 
 // GetNginxLicense returns Nginx License data with a context.
 func (client *NginxClient) GetNginxLicense(ctx context.Context) (*NginxLicense, error) {
-	var info NginxLicense
+	var data NginxLicense
 
-	if client.apiVersion < 9 {
-		return nil, fmt.Errorf("unsupported API version %v: %w by the client for the licensing endpoint", client.apiVersion, ErrNotSupported)
+	info, err := client.GetNginxInfo(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get nginx info: %w", err)
+	}
+	release, err := extractPlusVersionValues(info.Build)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get nginx plus release: %w", err)
 	}
 
-	err := client.get(ctx, "license", &info)
+	if (client.apiVersion < 9) || (release < 33) {
+		return &data, nil
+	}
+
+	err = client.get(ctx, "license", &data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get license: %w", err)
 	}
-	return &info, nil
+	return &data, nil
 }
 
 // GetCaches returns Cache stats with a context.
@@ -2016,4 +2027,23 @@ func (client *NginxClient) GetWorkers(ctx context.Context) ([]*Workers, error) {
 		return nil, fmt.Errorf("failed to get workers: %w", err)
 	}
 	return workers, nil
+}
+
+var rePlus = regexp.MustCompile(`-r(\d+)`)
+
+// extractPlusVersionValues
+func extractPlusVersionValues(input string) (int, error) {
+	var rValue int
+	matches := rePlus.FindStringSubmatch(input)
+
+	if len(matches) < 1 {
+		return 0, fmt.Errorf("no matches found in the input string")
+	}
+
+	rValue, err := strconv.Atoi(matches[1])
+	if err != nil {
+		return 0, fmt.Errorf("failed to convert rValue to integer: %w", err)
+	}
+
+	return rValue, nil
 }
