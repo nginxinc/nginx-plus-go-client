@@ -910,3 +910,73 @@ func TestGetMaxAPIVersionClient(t *testing.T) {
 		t.Fatalf("expected %v, got %v", c.apiVersion, maxVer)
 	}
 }
+
+func TestExtractPlusVersion(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		version  string
+		expected int
+	}{
+		{
+			name:     "r32",
+			version:  "nginx-plus-r32",
+			expected: 32,
+		},
+		{
+			name:     "r32p1",
+			version:  "nginx-plus-r32-p1",
+			expected: 32,
+		},
+		{
+			name:     "r32p2",
+			version:  "nginx-plus-r32-p2",
+			expected: 32,
+		},
+		{
+			name:     "r33",
+			version:  "nginx-plus-r33",
+			expected: 33,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			version, err := extractPlusVersionValues(test.version)
+			if err != nil {
+				t.Error(err)
+			}
+			if version != test.expected {
+				t.Errorf("values do not match, got: %d, expected %d)", version, test.expected)
+			}
+		})
+	}
+}
+
+func TestExtractPlusVersionNegativeCase(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		version string
+	}{
+		{
+			name:    "no-number",
+			version: "nginx-plus-rxx",
+		},
+		{
+			name:    "extra-chars",
+			version: "nginx-plus-rxx4343",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := extractPlusVersionValues(test.version)
+			if err == nil {
+				t.Errorf("Expected error but got %v", err)
+			}
+		})
+	}
+}

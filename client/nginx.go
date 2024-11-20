@@ -43,11 +43,12 @@ var (
 )
 
 var (
-	ErrParameterRequired = errors.New("parameter is required")
-	ErrServerNotFound    = errors.New("server not found")
-	ErrServerExists      = errors.New("server already exists")
-	ErrNotSupported      = errors.New("not supported")
-	ErrInvalidTimeout    = errors.New("invalid timeout")
+	ErrParameterRequired   = errors.New("parameter is required")
+	ErrServerNotFound      = errors.New("server not found")
+	ErrServerExists        = errors.New("server already exists")
+	ErrNotSupported        = errors.New("not supported")
+	ErrInvalidTimeout      = errors.New("invalid timeout")
+	ErrPlusVersionNotFound = errors.New("plus version not found in the input string")
 )
 
 // NginxClient lets you access NGINX Plus API.
@@ -2031,18 +2032,18 @@ func (client *NginxClient) GetWorkers(ctx context.Context) ([]*Workers, error) {
 
 var rePlus = regexp.MustCompile(`-r(\d+)`)
 
-// extractPlusVersionValues
+// extractPlusVersionValues.
 func extractPlusVersionValues(input string) (int, error) {
 	var rValue int
 	matches := rePlus.FindStringSubmatch(input)
 
 	if len(matches) < 1 {
-		return 0, fmt.Errorf("no matches found in the input string")
+		return 0, fmt.Errorf("%w [%s]", ErrPlusVersionNotFound, input)
 	}
 
 	rValue, err := strconv.Atoi(matches[1])
 	if err != nil {
-		return 0, fmt.Errorf("failed to convert rValue to integer: %w", err)
+		return 0, fmt.Errorf("failed to convert NGINX Plus release to integer: %w", err)
 	}
 
 	return rValue, nil
