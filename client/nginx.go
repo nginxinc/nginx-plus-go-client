@@ -9,7 +9,9 @@ import (
 	"io"
 	"net/http"
 	"reflect"
+	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -41,11 +43,12 @@ var (
 )
 
 var (
-	ErrParameterRequired = errors.New("parameter is required")
-	ErrServerNotFound    = errors.New("server not found")
-	ErrServerExists      = errors.New("server already exists")
-	ErrNotSupported      = errors.New("not supported")
-	ErrInvalidTimeout    = errors.New("invalid timeout")
+	ErrParameterRequired   = errors.New("parameter is required")
+	ErrServerNotFound      = errors.New("server not found")
+	ErrServerExists        = errors.New("server already exists")
+	ErrNotSupported        = errors.New("not supported")
+	ErrInvalidTimeout      = errors.New("invalid timeout")
+	ErrPlusVersionNotFound = errors.New("plus version not found in the input string")
 )
 
 // NginxClient lets you access NGINX Plus API.
@@ -191,6 +194,20 @@ type NginxInfo struct {
 	Generation      uint64
 	ProcessID       uint64 `json:"pid"`
 	ParentProcessID uint64 `json:"ppid"`
+}
+
+// LicenseReporting contains information about license status for NGINX Plus.
+type LicenseReporting struct {
+	Healthy bool
+	Fails   uint64
+	Grace   uint64
+}
+
+// NginxLicense contains licensing information about NGINX Plus.
+type NginxLicense struct {
+	ActiveTill uint64 `json:"active_till"`
+	Eval       bool
+	Reporting  LicenseReporting
 }
 
 // Caches is a map of cache stats by cache zone.
@@ -1553,6 +1570,30 @@ func (client *NginxClient) GetNginxInfo(ctx context.Context) (*NginxInfo, error)
 	return &info, nil
 }
 
+// GetNginxLicense returns Nginx License data with a context.
+func (client *NginxClient) GetNginxLicense(ctx context.Context) (*NginxLicense, error) {
+	var data NginxLicense
+
+	info, err := client.GetNginxInfo(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get nginx info: %w", err)
+	}
+	release, err := extractPlusVersionValues(info.Build)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get nginx plus release: %w", err)
+	}
+
+	if (client.apiVersion < 9) || (release < 33) {
+		return &data, nil
+	}
+
+	err = client.get(ctx, "license", &data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get license: %w", err)
+	}
+	return &data, nil
+}
+
 // GetCaches returns Cache stats with a context.
 func (client *NginxClient) GetCaches(ctx context.Context) (*Caches, error) {
 	var caches Caches
@@ -1987,4 +2028,23 @@ func (client *NginxClient) GetWorkers(ctx context.Context) ([]*Workers, error) {
 		return nil, fmt.Errorf("failed to get workers: %w", err)
 	}
 	return workers, nil
+}
+
+var rePlus = regexp.MustCompile(`-r(\d+)`)
+
+// extractPlusVersionValues.
+func extractPlusVersionValues(input string) (int, error) {
+	var rValue int
+	matches := rePlus.FindStringSubmatch(input)
+
+	if len(matches) < 1 {
+		return 0, fmt.Errorf("%w [%s]", ErrPlusVersionNotFound, input)
+	}
+
+	rValue, err := strconv.Atoi(matches[1])
+	if err != nil {
+		return 0, fmt.Errorf("failed to convert NGINX Plus release to integer: %w", err)
+	}
+
+	return rValue, nil
 }
