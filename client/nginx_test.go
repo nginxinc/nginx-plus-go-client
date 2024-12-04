@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -979,4 +980,183 @@ func TestExtractPlusVersionNegativeCase(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestClientHTTPUpdateServers(t *testing.T) {
+	t.Parallel()
+
+	responses := []response{
+		// response for first serversInNginx GET servers
+		{
+			statusCode: http.StatusOK,
+			servers:    []UpstreamServer{},
+		},
+		// response for AddHTTPServer GET servers for http server
+		{
+			statusCode: http.StatusOK,
+			servers:    []UpstreamServer{},
+		},
+		// response for AddHTTPServer POST server for http server
+		{
+			statusCode: http.StatusInternalServerError,
+			servers:    []UpstreamServer{},
+		},
+		// response for AddHTTPServer GET servers for https server
+		{
+			statusCode: http.StatusOK,
+			servers:    []UpstreamServer{},
+		},
+		// response for AddHTTPServer POST server for https server
+		{
+			statusCode: http.StatusCreated,
+			servers:    []UpstreamServer{},
+		},
+	}
+
+	handler := &fakeHandler{
+		func(w http.ResponseWriter, _ *http.Request) {
+			if len(responses) == 0 {
+				t.Fatal("ran out of responses")
+			}
+
+			re := responses[0]
+			responses = responses[1:]
+
+			w.WriteHeader(re.statusCode)
+
+			resp, err := json.Marshal(re.servers)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = w.Write(resp)
+			if err != nil {
+				t.Fatal(err)
+			}
+		},
+	}
+
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	client, err := NewNginxClient(server.URL, WithHTTPClient(&http.Client{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	httpServer := UpstreamServer{Server: "127.0.0.1:80"}
+	httpsServer := UpstreamServer{Server: "127.0.0.1:443"}
+
+	// we expect that we will get an error for the 500 error encountered when putting the http server
+	// but we also expect that we have the https server added
+	added, _, _, err := client.UpdateHTTPServers(context.TODO(), "fakeUpstream", []UpstreamServer{
+		httpServer,
+		httpsServer,
+	})
+	if err == nil {
+		t.Fatal("expected to receive an error for 500 response when adding first server")
+	}
+
+	if len(added) != 1 {
+		t.Fatalf("expected to get one added server, instead got %d", len(added))
+	}
+
+	if !reflect.DeepEqual(httpsServer, added[0]) {
+		t.Errorf("expected: %v got: %v", httpsServer, added[0])
+	}
+}
+
+func TestClientStreamUpdateServers(t *testing.T) {
+	t.Parallel()
+
+	responses := []response{
+		// response for first serversInNginx GET servers
+		{
+			statusCode: http.StatusOK,
+			servers:    []UpstreamServer{},
+		},
+		// response for AddStreamServer GET servers for streamServer1
+		{
+			statusCode: http.StatusOK,
+			servers:    []UpstreamServer{},
+		},
+		// response for AddStreamServer POST server for streamServer1
+		{
+			statusCode: http.StatusInternalServerError,
+			servers:    []UpstreamServer{},
+		},
+		// response for AddStreamServer GET servers for streamServer2
+		{
+			statusCode: http.StatusOK,
+			servers:    []UpstreamServer{},
+		},
+		// response for AddStreamServer POST server for streamServer2
+		{
+			statusCode: http.StatusCreated,
+			servers:    []UpstreamServer{},
+		},
+	}
+
+	handler := &fakeHandler{
+		func(w http.ResponseWriter, _ *http.Request) {
+			if len(responses) == 0 {
+				t.Fatal("ran out of responses")
+			}
+
+			re := responses[0]
+			responses = responses[1:]
+
+			w.WriteHeader(re.statusCode)
+
+			resp, err := json.Marshal(re.servers)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = w.Write(resp)
+			if err != nil {
+				t.Fatal(err)
+			}
+		},
+	}
+
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	client, err := NewNginxClient(server.URL, WithHTTPClient(&http.Client{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	streamServer1 := StreamUpstreamServer{Server: "127.0.0.1:2000"}
+	streamServer2 := StreamUpstreamServer{Server: "127.0.0.1:3000"}
+
+	// we expect that we will get an error for the 500 error encountered when putting server1
+	// but we also expect that we get the second server added
+	added, _, _, err := client.UpdateStreamServers(context.TODO(), "fakeUpstream", []StreamUpstreamServer{
+		streamServer1,
+		streamServer2,
+	})
+	if err == nil {
+		t.Fatal("expected to receive an error for 500 response when adding first server")
+	}
+
+	if len(added) != 1 {
+		t.Fatalf("expected to get one added server, instead got %d", len(added))
+	}
+
+	if !reflect.DeepEqual(streamServer2, added[0]) {
+		t.Errorf("expected: %v got: %v", streamServer2, added[0])
+	}
+}
+
+type response struct {
+	servers    []UpstreamServer
+	statusCode int
+}
+
+type fakeHandler struct {
+	handler func(w http.ResponseWriter, r *http.Request)
+}
+
+func (h *fakeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	h.handler(w, r)
 }
