@@ -808,6 +808,7 @@ func (client *NginxClient) DeleteHTTPServer(ctx context.Context, upstream string
 // Servers that are in the slice, but don't exist in NGINX will be added to NGINX.
 // Servers that aren't in the slice, but exist in NGINX, will be removed from NGINX.
 // Servers that are in the slice and exist in NGINX, but have different parameters, will be updated.
+// The client will attempt to update all servers, returning all the errors that occurred.
 func (client *NginxClient) UpdateHTTPServers(ctx context.Context, upstream string, servers []UpstreamServer) (added []UpstreamServer, deleted []UpstreamServer, updated []UpstreamServer, err error) {
 	serversInNginx, err := client.GetHTTPServers(ctx, upstream)
 	if err != nil {
@@ -824,27 +825,37 @@ func (client *NginxClient) UpdateHTTPServers(ctx context.Context, upstream strin
 	toAdd, toDelete, toUpdate := determineUpdates(formattedServers, serversInNginx)
 
 	for _, server := range toAdd {
-		err := client.AddHTTPServer(ctx, upstream, server)
-		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to update servers of %v upstream: %w", upstream, err)
+		addErr := client.AddHTTPServer(ctx, upstream, server)
+		if addErr != nil {
+			err = errors.Join(err, addErr)
+			continue
 		}
+		added = append(added, server)
 	}
 
 	for _, server := range toDelete {
-		err := client.DeleteHTTPServer(ctx, upstream, server.Server)
-		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to update servers of %v upstream: %w", upstream, err)
+		deleteErr := client.DeleteHTTPServer(ctx, upstream, server.Server)
+		if deleteErr != nil {
+			err = errors.Join(err, deleteErr)
+			continue
 		}
+		deleted = append(deleted, server)
 	}
 
 	for _, server := range toUpdate {
-		err := client.UpdateHTTPServer(ctx, upstream, server)
-		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to update servers of %v upstream: %w", upstream, err)
+		updateErr := client.UpdateHTTPServer(ctx, upstream, server)
+		if updateErr != nil {
+			err = errors.Join(err, updateErr)
+			continue
 		}
+		updated = append(updated, server)
 	}
 
-	return toAdd, toDelete, toUpdate, nil
+	if err != nil {
+		err = fmt.Errorf("failed to update servers of %s upstream: %w", upstream, err)
+	}
+
+	return added, deleted, updated, err
 }
 
 // haveSameParameters checks if a given server has the same parameters as a server already present in NGINX. Order matters.
@@ -1108,6 +1119,7 @@ func (client *NginxClient) DeleteStreamServer(ctx context.Context, upstream stri
 // Servers that are in the slice, but don't exist in NGINX will be added to NGINX.
 // Servers that aren't in the slice, but exist in NGINX, will be removed from NGINX.
 // Servers that are in the slice and exist in NGINX, but have different parameters, will be updated.
+// The client will attempt to update all servers, returning all the errors that occurred.
 func (client *NginxClient) UpdateStreamServers(ctx context.Context, upstream string, servers []StreamUpstreamServer) (added []StreamUpstreamServer, deleted []StreamUpstreamServer, updated []StreamUpstreamServer, err error) {
 	serversInNginx, err := client.GetStreamServers(ctx, upstream)
 	if err != nil {
@@ -1123,27 +1135,37 @@ func (client *NginxClient) UpdateStreamServers(ctx context.Context, upstream str
 	toAdd, toDelete, toUpdate := determineStreamUpdates(formattedServers, serversInNginx)
 
 	for _, server := range toAdd {
-		err := client.AddStreamServer(ctx, upstream, server)
-		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to update stream servers of %v upstream: %w", upstream, err)
+		addErr := client.AddStreamServer(ctx, upstream, server)
+		if addErr != nil {
+			err = errors.Join(err, addErr)
+			continue
 		}
+		added = append(added, server)
 	}
 
 	for _, server := range toDelete {
-		err := client.DeleteStreamServer(ctx, upstream, server.Server)
-		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to update stream servers of %v upstream: %w", upstream, err)
+		deleteErr := client.DeleteStreamServer(ctx, upstream, server.Server)
+		if deleteErr != nil {
+			err = errors.Join(err, deleteErr)
+			continue
 		}
+		deleted = append(deleted, server)
 	}
 
 	for _, server := range toUpdate {
-		err := client.UpdateStreamServer(ctx, upstream, server)
-		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to update stream servers of %v upstream: %w", upstream, err)
+		updateErr := client.UpdateStreamServer(ctx, upstream, server)
+		if updateErr != nil {
+			err = errors.Join(err, updateErr)
+			continue
 		}
+		updated = append(updated, server)
 	}
 
-	return toAdd, toDelete, toUpdate, nil
+	if err != nil {
+		err = fmt.Errorf("failed to update stream servers of %s upstream: %w", upstream, err)
+	}
+
+	return added, deleted, updated, err
 }
 
 func (client *NginxClient) getIDOfStreamServer(ctx context.Context, upstream string, name string) (int, error) {
