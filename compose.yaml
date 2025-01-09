@@ -33,8 +33,8 @@ services:
     volumes:
       - type: bind
         source: ./
-        target: /go/src/github.com/nginxinc/nginx-plus-go-client
-    working_dir: /go/src/github.com/nginxinc/nginx-plus-go-client
+        target: /go/src/github.com/nginx/nginx-plus-go-client
+    working_dir: /go/src/github.com/nginx/nginx-plus-go-client
     command: go test -v -shuffle=on -race tests/client_test.go
     depends_on:
       - nginx
