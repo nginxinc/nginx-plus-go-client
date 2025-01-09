@@ -1,14 +1,14 @@
 <!-- markdownlint-disable-next-line first-line-h1 -->
-[![OpenSSFScorecard](https://api.securityscorecards.dev/projects/github.com/nginxinc/nginx-plus-go-client/badge)](https://scorecard.dev/viewer/?uri=github.com/nginxinc/nginx-plus-go-client)
-[![Continuous Integration](https://github.com/nginxinc/nginx-plus-go-client/workflows/Continuous%20Integration/badge.svg)](https://github.com/nginxinc/nginx-plus-go-client/actions)
+[![OpenSSFScorecard](https://api.securityscorecards.dev/projects/github.com/nginx/nginx-plus-go-client/badge)](https://scorecard.dev/viewer/?uri=github.com/nginx/nginx-plus-go-client)
+[![Continuous Integration](https://github.com/nginx/nginx-plus-go-client/workflows/Continuous%20Integration/badge.svg)](https://github.com/nginx/nginx-plus-go-client/actions)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Go Report Card](https://goreportcard.com/badge/github.com/nginxinc/nginx-plus-go-client)](https://goreportcard.com/report/github.com/nginxinc/nginx-plus-go-client)
-[![FOSSA Status](https://app.fossa.com/api/projects/custom%2B5618%2Fgithub.com%2Fnginxinc%2Fnginx-plus-go-client.svg?type=shield)](https://app.fossa.com/projects/custom%2B5618%2Fgithub.com%2Fnginxinc%2Fnginx-plus-go-client?ref=badge_shield)
-[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/nginxinc/nginx-plus-go-client?logo=github&sort=semver)](https://github.com/nginxinc/nginx-plus-go-client/releases/latest)
-![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/nginxinc/nginx-plus-go-client?logo=go)
+[![Go Report Card](https://goreportcard.com/badge/github.com/nginx/nginx-plus-go-client)](https://goreportcard.com/report/github.com/nginx/nginx-plus-go-client)
+[![FOSSA Status](https://app.fossa.com/api/projects/custom%2B5618%2Fgithub.com%2Fnginx%2Fnginx-plus-go-client.svg?type=shield)](https://app.fossa.com/projects/custom%2B5618%2Fgithub.com%2Fnginx%2Fnginx-plus-go-client?ref=badge_shield)
+[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/nginx/nginx-plus-go-client?logo=github&sort=semver)](https://github.com/nginx/nginx-plus-go-client/releases/latest)
+![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/nginx/nginx-plus-go-client?logo=go)
 [![Slack](https://img.shields.io/badge/slack-nginxcommunity-green?logo=slack)](https://nginxcommunity.slack.com)
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
-[![Community Support](https://badgen.net/badge/support/community/cyan?icon=awesome)](https://github.com/nginxinc/nginx-plus-go-client/blob/main/SECURITY.md)
+[![Community Support](https://badgen.net/badge/support/community/cyan?icon=awesome)](https://github.com/nginx/nginx-plus-go-client/blob/main/SECURITY.md)
 
 # NGINX Plus Go Client
 
@@ -41,17 +41,17 @@ This Client works against versions 4 to 9 of the NGINX Plus API. The table below
 the API was first introduced.
 
 | API version | NGINX Plus version |
-|-------------|--------------------|
-| 4 | R18 |
-| 5 | R19 |
-| 6 | R20 |
-| 7 | R25 |
-| 8 | R27 |
-| 9 | R30 |
+| ----------- | ------------------ |
+| 4           | R18                |
+| 5           | R19                |
+| 6           | R20                |
+| 7           | R25                |
+| 8           | R27                |
+| 9           | R30                |
 
 ## Using the Client
 
-1. Import `github.com/nginxinc/nginx-plus-go-client/client` into your go project.
+1. Import `github.com/nginx/nginx-plus-go-client/client` into your go project.
 2. Use your favorite vendor tool to add this to your `/vendor` directory in your project.
 
 ## Testing
