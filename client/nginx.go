@@ -1046,6 +1046,7 @@ func (client *NginxClient) patch(ctx context.Context, path string, input interfa
 	if err != nil {
 		return fmt.Errorf("failed to create a patch request: %w", err)
 	}
+	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := client.httpClient.Do(req)
 	if err != nil {
