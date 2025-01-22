@@ -61,8 +61,39 @@ func TestStreamClient(t *testing.T) {
 		t.Errorf("Adding a duplicated server succeeded")
 	}
 
-	// test deleting a stream server
+	// test updating a stream server
+	streamServers, err := c.GetStreamServers(ctx, streamUpstream)
+	if err != nil {
+		t.Errorf("Error getting stream servers: %v", err)
+	}
+	if len(streamServers) != 1 {
+		t.Errorf("Expected 1 servers, got %v", streamServers)
+	}
 
+	streamServers[0].SlowStart = "30s"
+	err = c.UpdateStreamServer(ctx, streamUpstream, streamServers[0])
+	if err != nil {
+		t.Errorf("Error when updating a server: %v", err)
+	}
+
+	streamServers, err = c.GetStreamServers(ctx, streamUpstream)
+	if err != nil {
+		t.Errorf("Error getting stream servers: %v", err)
+	}
+	if len(streamServers) != 1 {
+		t.Errorf("Expected 1 servers, got %v", streamServers)
+	}
+	if streamServers[0].SlowStart != "30s" {
+		t.Errorf("The server wasn't successfully updated: expected a 'SlowStart' of 30s, actual was %s", streamServers[0].SlowStart)
+	}
+
+	streamServers[0].ID++
+	err = c.UpdateStreamServer(ctx, streamUpstream, streamServers[0])
+	if err == nil {
+		t.Errorf("Updating a server without a matching server ID succeeded")
+	}
+
+	// test deleting a stream server
 	err = c.DeleteStreamServer(ctx, streamUpstream, streamServer.Server)
 	if err != nil {
 		t.Fatalf("Error when deleting a server: %v", err)
@@ -73,7 +104,7 @@ func TestStreamClient(t *testing.T) {
 		t.Errorf("Deleting a nonexisting server succeeded")
 	}
 
-	streamServers, err := c.GetStreamServers(ctx, streamUpstream)
+	streamServers, err = c.GetStreamServers(ctx, streamUpstream)
 	if err != nil {
 		t.Errorf("Error getting stream servers: %v", err)
 	}
@@ -340,8 +371,39 @@ func TestClient(t *testing.T) {
 		t.Errorf("Adding a duplicated server succeeded")
 	}
 
-	// test deleting a http server
+	// test updating an http server
+	servers, err := c.GetHTTPServers(ctx, upstream)
+	if err != nil {
+		t.Errorf("Error getting servers: %v", err)
+	}
+	if len(servers) != 1 {
+		t.Errorf("Expected 1 servers, got %v", servers)
+	}
 
+	servers[0].SlowStart = "30s"
+	err = c.UpdateHTTPServer(ctx, upstream, servers[0])
+	if err != nil {
+		t.Errorf("Error when updating a server: %v", err)
+	}
+
+	servers, err = c.GetHTTPServers(ctx, upstream)
+	if err != nil {
+		t.Errorf("Error getting servers: %v", err)
+	}
+	if len(servers) != 1 {
+		t.Errorf("Expected 1 servers, got %v", servers)
+	}
+	if servers[0].SlowStart != "30s" {
+		t.Errorf("The server wasn't successfully updated: expected a 'SlowStart' of 30s, actual was %s", servers[0].SlowStart)
+	}
+
+	servers[0].ID++
+	err = c.UpdateHTTPServer(ctx, upstream, servers[0])
+	if err == nil {
+		t.Errorf("Updating a server without a matching server ID succeeded")
+	}
+
+	// test deleting a http server
 	err = c.DeleteHTTPServer(ctx, upstream, server.Server)
 	if err != nil {
 		t.Fatalf("Error when deleting a server: %v", err)
@@ -381,7 +443,7 @@ func TestClient(t *testing.T) {
 
 	// test getting servers
 
-	servers, err := c.GetHTTPServers(ctx, upstream)
+	servers, err = c.GetHTTPServers(ctx, upstream)
 	if err != nil {
 		t.Fatalf("Error when getting servers: %v", err)
 	}
