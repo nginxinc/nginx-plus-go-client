@@ -477,9 +477,9 @@ func TestHaveSameParameters(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.msg, func(t *testing.T) {
 			t.Parallel()
-			result := haveSameParameters(test.server, test.serverNGX)
+			result := test.server.hasSameParametersAs(test.serverNGX)
 			if result != test.expected {
-				t.Errorf("haveSameParameters(%v, %v) returned %v but expected %v", test.server, test.serverNGX, result, test.expected)
+				t.Errorf("(%v) hasSameParametersAs (%v) returned %v but expected %v", test.server, test.serverNGX, result, test.expected)
 			}
 		})
 	}
@@ -562,9 +562,9 @@ func TestHaveSameParametersForStream(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.msg, func(t *testing.T) {
 			t.Parallel()
-			result := haveSameParametersForStream(test.server, test.serverNGX)
+			result := test.server.hasSameParametersAs(test.serverNGX)
 			if result != test.expected {
-				t.Errorf("haveSameParametersForStream(%v, %v) returned %v but expected %v", test.server, test.serverNGX, result, test.expected)
+				t.Errorf("(%v) hasSameParametersAs (%v) returned %v but expected %v", test.server, test.serverNGX, result, test.expected)
 			}
 		})
 	}
@@ -982,174 +982,464 @@ func TestExtractPlusVersionNegativeCase(t *testing.T) {
 	}
 }
 
-func TestClientHTTPUpdateServers(t *testing.T) {
+func TestUpdateHTTPServers(t *testing.T) {
 	t.Parallel()
 
-	responses := []response{
-		// response for first serversInNginx GET servers
-		{
-			statusCode: http.StatusOK,
-			servers:    []UpstreamServer{},
+	testcases := map[string]struct {
+		reqServers                       []UpstreamServer
+		responses                        []response
+		expAdded, expDeleted, expUpdated int
+		expErr                           bool
+	}{
+		"successfully add 1 server": {
+			reqServers: []UpstreamServer{{Server: "127.0.0.1:80"}},
+			responses: []response{
+				// response for first serversInNginx GET servers
+				{
+					statusCode: http.StatusOK,
+				},
+				// response for addHTTPServer POST server for http server
+				{
+					statusCode: http.StatusCreated,
+				},
+			},
+			expAdded: 1,
 		},
-		// response for AddHTTPServer GET servers for http server
-		{
-			statusCode: http.StatusOK,
-			servers:    []UpstreamServer{},
+		"successfully update 1 server": {
+			reqServers: []UpstreamServer{{Server: "127.0.0.1:80"}},
+			responses: []response{
+				// response for first serversInNginx GET servers
+				{
+					statusCode: http.StatusOK,
+					servers: []UpstreamServer{
+						{ID: 1, Server: "127.0.0.1:80", Route: "/test"},
+					},
+				},
+				// response for UpdateHTTPServer PATCH server for http server
+				{
+					statusCode: http.StatusOK,
+				},
+			},
+			expUpdated: 1,
 		},
-		// response for AddHTTPServer POST server for http server
-		{
-			statusCode: http.StatusInternalServerError,
-			servers:    []UpstreamServer{},
+		"successfully delete 1 server": {
+			reqServers: []UpstreamServer{{Server: "127.0.0.1:80"}},
+			responses: []response{
+				// response for first serversInNginx GET servers
+				{
+					statusCode: http.StatusOK,
+					servers: []UpstreamServer{
+						{ID: 1, Server: "127.0.0.1:80"},
+						{ID: 2, Server: "127.0.0.2:80"},
+					},
+				},
+				// response for deleteHTTPServer DELETE server for http server
+				{
+					statusCode: http.StatusOK,
+				},
+			},
+			expDeleted: 1,
 		},
-		// response for AddHTTPServer GET servers for https server
-		{
-			statusCode: http.StatusOK,
-			servers:    []UpstreamServer{},
+		"successfully add 1 server, update 1 server, delete 1 server": {
+			reqServers: []UpstreamServer{
+				{Server: "127.0.0.1:80", Route: "/test"},
+				{Server: "127.0.0.2:80"},
+			},
+			responses: []response{
+				// response for first serversInNginx GET servers
+				{
+					statusCode: http.StatusOK,
+					servers: []UpstreamServer{
+						{ID: 1, Server: "127.0.0.1:80"},
+						{ID: 2, Server: "127.0.0.3:80"},
+					},
+				},
+				// response for addHTTPServer POST server for http server
+				{
+					statusCode: http.StatusCreated,
+				},
+				// response for deleteHTTPServer DELETE server for http server
+				{
+					statusCode: http.StatusOK,
+				},
+				// response for UpdateHTTPServer PATCH server for http server
+				{
+					statusCode: http.StatusOK,
+				},
+			},
+			expAdded:   1,
+			expUpdated: 1,
+			expDeleted: 1,
 		},
-		// response for AddHTTPServer POST server for https server
-		{
-			statusCode: http.StatusCreated,
-			servers:    []UpstreamServer{},
+		"successfully add 1 server with ignored identical duplicate": {
+			reqServers: []UpstreamServer{
+				{Server: "127.0.0.1:80", Route: "/test"},
+				{Server: "127.0.0.1", Route: "/test"},
+				{Server: "127.0.0.1:80", Route: "/test", MaxConns: &defaultMaxConns},
+				{Server: "127.0.0.1:80", Route: "/test", Backup: &defaultBackup},
+				{Server: "127.0.0.1", Route: "/test", SlowStart: defaultSlowStart},
+			},
+			responses: []response{
+				// response for first serversInNginx GET servers
+				{
+					statusCode: http.StatusOK,
+					servers:    []UpstreamServer{},
+				},
+				// response for addHTTPServer POST server for http server
+				{
+					statusCode: http.StatusCreated,
+				},
+			},
+			expAdded: 1,
+		},
+		"successfully add 1 server, receive 1 error for non-identical duplicates": {
+			reqServers: []UpstreamServer{
+				{Server: "127.0.0.1:80", Route: "/test"},
+				{Server: "127.0.0.1:80", Route: "/test"},
+				{Server: "127.0.0.2:80", Route: "/test1"},
+				{Server: "127.0.0.2:80", Route: "/test2"},
+				{Server: "127.0.0.2:80", Route: "/test3"},
+			},
+			responses: []response{
+				// response for first serversInNginx GET servers
+				{
+					statusCode: http.StatusOK,
+					servers:    []UpstreamServer{},
+				},
+				// response for addHTTPServer POST server for http server
+				{
+					statusCode: http.StatusCreated,
+				},
+			},
+			expAdded: 1,
+			expErr:   true,
+		},
+		"successfully add 1 server, receive 1 error": {
+			reqServers: []UpstreamServer{
+				{Server: "127.0.0.1:80"},
+				{Server: "127.0.0.1:443"},
+			},
+			responses: []response{ // response for first serversInNginx GET servers
+				{
+					statusCode: http.StatusOK,
+					servers:    []UpstreamServer{},
+				},
+				// response for addHTTPServer POST server for server1
+				{
+					statusCode: http.StatusInternalServerError,
+					servers:    []UpstreamServer{},
+				},
+				// response for addHTTPServer POST server for server2
+				{
+					statusCode: http.StatusCreated,
+					servers:    []UpstreamServer{},
+				},
+			},
+			expAdded: 1,
+			expErr:   true,
 		},
 	}
 
-	handler := &fakeHandler{
-		func(w http.ResponseWriter, _ *http.Request) {
-			if len(responses) == 0 {
-				t.Fatal("ran out of responses")
+	for name, tc := range testcases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			var requests []*http.Request
+			handler := &fakeHandler{
+				func(w http.ResponseWriter, r *http.Request) {
+					requests = append(requests, r)
+
+					if len(tc.responses) == 0 {
+						t.Fatal("ran out of responses")
+					}
+					if r.Method == http.MethodPost || r.Method == http.MethodPut {
+						contentType, ok := r.Header["Content-Type"]
+						if !ok {
+							t.Fatalf("expected request type %s to have a Content-Type header", r.Method)
+						}
+						if len(contentType) != 1 || contentType[0] != "application/json" {
+							t.Fatalf("expected request type %s to have a Content-Type header value of 'application/json'", r.Method)
+						}
+					}
+
+					re := tc.responses[0]
+					tc.responses = tc.responses[1:]
+
+					w.WriteHeader(re.statusCode)
+
+					resp, err := json.Marshal(re.servers)
+					if err != nil {
+						t.Fatal(err)
+					}
+					_, err = w.Write(resp)
+					if err != nil {
+						t.Fatal(err)
+					}
+				},
 			}
 
-			re := responses[0]
-			responses = responses[1:]
+			server := httptest.NewServer(handler)
+			defer server.Close()
 
-			w.WriteHeader(re.statusCode)
-
-			resp, err := json.Marshal(re.servers)
+			client, err := NewNginxClient(server.URL, WithHTTPClient(&http.Client{}))
 			if err != nil {
 				t.Fatal(err)
 			}
-			_, err = w.Write(resp)
-			if err != nil {
-				t.Fatal(err)
+
+			added, deleted, updated, err := client.UpdateHTTPServers(context.Background(), "fakeUpstream", tc.reqServers)
+			if tc.expErr && err == nil {
+				t.Fatal("expected to receive an error")
 			}
-		},
-	}
+			if !tc.expErr && err != nil {
+				t.Fatalf("received an unexpected error: %v", err)
+			}
 
-	server := httptest.NewServer(handler)
-	defer server.Close()
-
-	client, err := NewNginxClient(server.URL, WithHTTPClient(&http.Client{}))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	httpServer := UpstreamServer{Server: "127.0.0.1:80"}
-	httpsServer := UpstreamServer{Server: "127.0.0.1:443"}
-
-	// we expect that we will get an error for the 500 error encountered when putting the http server
-	// but we also expect that we have the https server added
-	added, _, _, err := client.UpdateHTTPServers(context.TODO(), "fakeUpstream", []UpstreamServer{
-		httpServer,
-		httpsServer,
-	})
-	if err == nil {
-		t.Fatal("expected to receive an error for 500 response when adding first server")
-	}
-
-	if len(added) != 1 {
-		t.Fatalf("expected to get one added server, instead got %d", len(added))
-	}
-
-	if !reflect.DeepEqual(httpsServer, added[0]) {
-		t.Errorf("expected: %v got: %v", httpsServer, added[0])
+			if len(added) != tc.expAdded {
+				t.Fatalf("expected to get %d added server(s), instead got %d", tc.expAdded, len(added))
+			}
+			if len(deleted) != tc.expDeleted {
+				t.Fatalf("expected to get %d deleted server(s), instead got %d", tc.expDeleted, len(deleted))
+			}
+			if len(updated) != tc.expUpdated {
+				t.Fatalf("expected to get %d updated server(s), instead got %d", tc.expUpdated, len(updated))
+			}
+			if len(tc.responses) != 0 {
+				t.Fatalf("did not use all expected responses, %d unused", len(tc.responses))
+			}
+		})
 	}
 }
 
-func TestClientStreamUpdateServers(t *testing.T) {
+func TestUpdateStreamServers(t *testing.T) {
 	t.Parallel()
 
-	responses := []response{
-		// response for first serversInNginx GET servers
-		{
-			statusCode: http.StatusOK,
-			servers:    []UpstreamServer{},
+	testcases := map[string]struct {
+		reqServers                       []StreamUpstreamServer
+		responses                        []response
+		expAdded, expDeleted, expUpdated int
+		expErr                           bool
+	}{
+		"successfully add 1 server": {
+			reqServers: []StreamUpstreamServer{{Server: "127.0.0.1:80"}},
+			responses: []response{
+				// response for first serversInNginx GET servers
+				{
+					statusCode: http.StatusOK,
+				},
+				// response for addStreamServer POST server for stream server
+				{
+					statusCode: http.StatusCreated,
+				},
+			},
+			expAdded: 1,
 		},
-		// response for AddStreamServer GET servers for streamServer1
-		{
-			statusCode: http.StatusOK,
-			servers:    []UpstreamServer{},
+		"successfully update 1 server": {
+			reqServers: []StreamUpstreamServer{{Server: "127.0.0.1:80"}},
+			responses: []response{
+				// response for first serversInNginx GET servers
+				{
+					statusCode: http.StatusOK,
+					servers: []StreamUpstreamServer{
+						{ID: 1, Server: "127.0.0.1:80", SlowStart: "30s"},
+					},
+				},
+				// response for UpdateStreamServer PATCH server for stream server
+				{
+					statusCode: http.StatusOK,
+				},
+			},
+			expUpdated: 1,
 		},
-		// response for AddStreamServer POST server for streamServer1
-		{
-			statusCode: http.StatusInternalServerError,
-			servers:    []UpstreamServer{},
+		"successfully delete 1 server": {
+			reqServers: []StreamUpstreamServer{{Server: "127.0.0.1:80"}},
+			responses: []response{
+				// response for first serversInNginx GET servers
+				{
+					statusCode: http.StatusOK,
+					servers: []StreamUpstreamServer{
+						{ID: 1, Server: "127.0.0.1:80"},
+						{ID: 2, Server: "127.0.0.2:80"},
+					},
+				},
+				// response for deleteStreamServer DELETE server for stream server
+				{
+					statusCode: http.StatusOK,
+				},
+			},
+			expDeleted: 1,
 		},
-		// response for AddStreamServer GET servers for streamServer2
-		{
-			statusCode: http.StatusOK,
-			servers:    []UpstreamServer{},
+		"successfully add 1 server, update 1 server, delete 1 server": {
+			reqServers: []StreamUpstreamServer{
+				{Server: "127.0.0.1:80", SlowStart: "30s"},
+				{Server: "127.0.0.2:80"},
+			},
+			responses: []response{
+				// response for first serversInNginx GET servers
+				{
+					statusCode: http.StatusOK,
+					servers: []StreamUpstreamServer{
+						{ID: 1, Server: "127.0.0.1:80"},
+						{ID: 2, Server: "127.0.0.3:80"},
+					},
+				},
+				// response for addStreamServer POST server for stream server
+				{
+					statusCode: http.StatusCreated,
+				},
+				// response for deleteStreamServer DELETE server for stream server
+				{
+					statusCode: http.StatusOK,
+				},
+				// response for UpdateStreamServer PATCH server for stream server
+				{
+					statusCode: http.StatusOK,
+				},
+			},
+			expAdded:   1,
+			expUpdated: 1,
+			expDeleted: 1,
 		},
-		// response for AddStreamServer POST server for streamServer2
-		{
-			statusCode: http.StatusCreated,
-			servers:    []UpstreamServer{},
+		"successfully add 1 server with ignored identical duplicate": {
+			reqServers: []StreamUpstreamServer{
+				{Server: "127.0.0.1:80", SlowStart: "30s"},
+				{Server: "127.0.0.1", SlowStart: "30s"},
+				{Server: "127.0.0.1:80", SlowStart: "30s", MaxConns: &defaultMaxConns},
+				{Server: "127.0.0.1", SlowStart: "30s", MaxFails: &defaultMaxFails},
+				{Server: "127.0.0.1", SlowStart: "30s", FailTimeout: defaultFailTimeout},
+			},
+			responses: []response{
+				// response for first serversInNginx GET servers
+				{
+					statusCode: http.StatusOK,
+					servers:    []UpstreamServer{},
+				},
+				// response for addStreamServer POST server for stream server
+				{
+					statusCode: http.StatusCreated,
+				},
+			},
+			expAdded: 1,
+		},
+		"successfully add 1 server, receive 1 error for non-identical duplicates": {
+			reqServers: []StreamUpstreamServer{
+				{Server: "127.0.0.1:80", SlowStart: "30s"},
+				{Server: "127.0.0.1:80", SlowStart: "30s"},
+				{Server: "127.0.0.2:80", SlowStart: "10s"},
+				{Server: "127.0.0.2:80", SlowStart: "20s"},
+				{Server: "127.0.0.2:80", SlowStart: "30s"},
+			},
+			responses: []response{
+				// response for first serversInNginx GET servers
+				{
+					statusCode: http.StatusOK,
+					servers:    []UpstreamServer{},
+				},
+				// response for addStreamServer POST server for stream server
+				{
+					statusCode: http.StatusCreated,
+				},
+			},
+			expAdded: 1,
+			expErr:   true,
+		},
+		"successfully add 1 server, receive 1 error": {
+			reqServers: []StreamUpstreamServer{
+				{Server: "127.0.0.1:2000"},
+				{Server: "127.0.0.1:3000"},
+			},
+			responses: []response{
+				// response for first serversInNginx GET servers
+				{
+					statusCode: http.StatusOK,
+					servers:    []UpstreamServer{},
+				},
+				// response for addStreamServer POST server for server1
+				{
+					statusCode: http.StatusInternalServerError,
+					servers:    []UpstreamServer{},
+				},
+				// response for addStreamServer POST server for server2
+				{
+					statusCode: http.StatusCreated,
+					servers:    []UpstreamServer{},
+				},
+			},
+			expAdded: 1,
+			expErr:   true,
 		},
 	}
 
-	handler := &fakeHandler{
-		func(w http.ResponseWriter, _ *http.Request) {
-			if len(responses) == 0 {
-				t.Fatal("ran out of responses")
+	for name, tc := range testcases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			var requests []*http.Request
+			handler := &fakeHandler{
+				func(w http.ResponseWriter, r *http.Request) {
+					requests = append(requests, r)
+
+					if len(tc.responses) == 0 {
+						t.Fatal("ran out of responses")
+					}
+					if r.Method == http.MethodPost || r.Method == http.MethodPut {
+						contentType, ok := r.Header["Content-Type"]
+						if !ok {
+							t.Fatalf("expected request type %s to have a Content-Type header", r.Method)
+						}
+						if len(contentType) != 1 || contentType[0] != "application/json" {
+							t.Fatalf("expected request type %s to have a Content-Type header value of 'application/json'", r.Method)
+						}
+					}
+
+					re := tc.responses[0]
+					tc.responses = tc.responses[1:]
+
+					w.WriteHeader(re.statusCode)
+
+					resp, err := json.Marshal(re.servers)
+					if err != nil {
+						t.Fatal(err)
+					}
+					_, err = w.Write(resp)
+					if err != nil {
+						t.Fatal(err)
+					}
+				},
 			}
 
-			re := responses[0]
-			responses = responses[1:]
+			server := httptest.NewServer(handler)
+			defer server.Close()
 
-			w.WriteHeader(re.statusCode)
-
-			resp, err := json.Marshal(re.servers)
+			client, err := NewNginxClient(server.URL, WithHTTPClient(&http.Client{}))
 			if err != nil {
 				t.Fatal(err)
 			}
-			_, err = w.Write(resp)
-			if err != nil {
-				t.Fatal(err)
+
+			added, deleted, updated, err := client.UpdateStreamServers(context.Background(), "fakeUpstream", tc.reqServers)
+			if tc.expErr && err == nil {
+				t.Fatal("expected to receive an error")
 			}
-		},
-	}
-
-	server := httptest.NewServer(handler)
-	defer server.Close()
-
-	client, err := NewNginxClient(server.URL, WithHTTPClient(&http.Client{}))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	streamServer1 := StreamUpstreamServer{Server: "127.0.0.1:2000"}
-	streamServer2 := StreamUpstreamServer{Server: "127.0.0.1:3000"}
-
-	// we expect that we will get an error for the 500 error encountered when putting server1
-	// but we also expect that we get the second server added
-	added, _, _, err := client.UpdateStreamServers(context.TODO(), "fakeUpstream", []StreamUpstreamServer{
-		streamServer1,
-		streamServer2,
-	})
-	if err == nil {
-		t.Fatal("expected to receive an error for 500 response when adding first server")
-	}
-
-	if len(added) != 1 {
-		t.Fatalf("expected to get one added server, instead got %d", len(added))
-	}
-
-	if !reflect.DeepEqual(streamServer2, added[0]) {
-		t.Errorf("expected: %v got: %v", streamServer2, added[0])
+			if !tc.expErr && err != nil {
+				t.Fatalf("received an unexpected error: %v", err)
+			}
+			if len(added) != tc.expAdded {
+				t.Fatalf("expected to get %d added server(s), instead got %d", tc.expAdded, len(added))
+			}
+			if len(deleted) != tc.expDeleted {
+				t.Fatalf("expected to get %d deleted server(s), instead got %d", tc.expDeleted, len(deleted))
+			}
+			if len(updated) != tc.expUpdated {
+				t.Fatalf("expected to get %d updated server(s), instead got %d", tc.expUpdated, len(updated))
+			}
+			if len(tc.responses) != 0 {
+				t.Fatalf("did not use all expected responses, %d unused", len(tc.responses))
+			}
+		})
 	}
 }
 
 type response struct {
-	servers    []UpstreamServer
+	servers    interface{}
 	statusCode int
 }
 
